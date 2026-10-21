@@ -1,39 +1,65 @@
-﻿using System.Windows;
+﻿using System;
+using System.IO;
+using System.Windows;
+using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.EntityFrameworkCore;
 using DataAccess;
 using Domain.Enums;
 using Npgsql;
+using Presentation.Views;
+using BusinessLogic.Services;
 
 namespace Presentation
 {
     public partial class App : Application
     {
         public static ServiceProvider ServiceProvider { get; private set; } = null!;
+        public static IConfiguration Configuration { get; private set; } = null!;
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
 
-            var services = new ServiceCollection();
-
-            string connectionString = "Host=aws-0-eu-west-1.pooler.supabase.com;Port=5432;Database=postgres;Username=postgres.pyzxothzgzwdzdhwapjb;Password=databasesstrongpasswor;Ssl Mode=Require;Trust Server Certificate=true;";
-
-            services.AddSingleton(_ =>
+            try
             {
-                var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-                dataSourceBuilder.MapEnum<UserRole>("user_role");
-                dataSourceBuilder.MapEnum<CopyStatus>("copy_status");
-                dataSourceBuilder.MapEnum<ReservationStatus>("reservation_status");
-                return dataSourceBuilder.Build();
-            });
+                // Замінили GetCurrentDirectory на BaseDirectory - це найбезпечніший шлях у WPF
+                var builder = new ConfigurationBuilder()
+                    .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
+                    .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
+                
+                Configuration = builder.Build();
+                string connectionString = Configuration.GetConnectionString("DefaultConnection")!;
 
-            services.AddDbContext<SmartLibDbContext>((serviceProvider, options) =>
-                options.UseNpgsql(serviceProvider.GetRequiredService<NpgsqlDataSource>())
-                       .UseSnakeCaseNamingConvention() 
-            );
+                var services = new ServiceCollection();
 
-            ServiceProvider = services.BuildServiceProvider();
+                services.AddSingleton(_ =>
+                {
+                    var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+                    dataSourceBuilder.MapEnum<UserRole>("user_role");
+                    dataSourceBuilder.MapEnum<CopyStatus>("copy_status");
+                    dataSourceBuilder.MapEnum<ReservationStatus>("reservation_status");
+                    return dataSourceBuilder.Build();
+                });
+
+                services.AddDbContext<SmartLibDbContext>((serviceProvider, options) =>
+                    options.UseNpgsql(serviceProvider.GetRequiredService<NpgsqlDataSource>())
+                           .UseSnakeCaseNamingConvention() 
+                );
+
+                services.AddScoped<IBookService, BookService>();
+                services.AddScoped<ILoanService, LoanService>();
+
+                ServiceProvider = services.BuildServiceProvider();
+
+                var mainWindow = new MainWindow();
+                mainWindow.Show();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Критична помилка при запуску:\n{ex.Message}", "Помилка запуску", MessageBoxButton.OK, MessageBoxImage.Error);
+                Current.Shutdown();
+            }
         }
     }
 }

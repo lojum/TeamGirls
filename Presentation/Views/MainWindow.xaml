@@ -1,4 +1,4 @@
-<Window x:Class="Presentation.Views.MainWindow"
+﻿<Window x:Class="Presentation.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="SmartLib - Welcome"
@@ -16,13 +16,13 @@
         </Border>
         <Border Grid.Column="1" Background="White">
             <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="340">
-                <TextBlock Text="Library Administrator"
+                <TextBlock Text="Welcome to SmartLib"
                            FontSize="32"
                            FontWeight="Bold"
                            Foreground="#173B59"
                            TextAlignment="Center"
                            Margin="0,0,0,10"/>
-                <TextBlock Text="Sign in to manage the library, readers, and overdue loans."
+                <TextBlock Text="Join our community to access your collections, manage loans, and explore thousands of titles."
                            FontSize="14"
                            Foreground="#647687"
                            TextAlignment="Center"

@@ -201,8 +201,7 @@
                         BorderThickness="1"
                         FontSize="11"
                         Foreground="#526171"
-                        Cursor="Hand"
-                        Click="RefreshDashboard_Click"/>
+                        Cursor="Hand"/>
             </Grid>
 
             <UniformGrid Grid.Row="1" Columns="3"
