@@ -1,4 +1,4 @@
-﻿<Window x:Class="Presentation.Views.MainWindow"
+<Window x:Class="Presentation.Views.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="SmartLib - Welcome"
@@ -8,26 +8,35 @@
         FontFamily="Segoe UI">
     <Grid>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="*" />
-            <ColumnDefinition Width="*" />
+            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
-
         <Border Grid.Column="0" ClipToBounds="True">
-            <Image Source="/Views/Images/library.jpg" Stretch="UniformToFill" />
+            <Image Source="/Views/Images/library.jpg" Stretch="UniformToFill"/>
         </Border>
-
         <Border Grid.Column="1" Background="White">
-            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="300">
-                
-                <TextBlock Text="Welcome back" FontSize="32" FontWeight="Bold" 
-                           Foreground="#173B59" TextAlignment="Center" Margin="0,0,0,10"/>
-                
-                <TextBlock Text="Access your collections, manage loans, and explore thousands of titles." 
-                           FontSize="14" Foreground="#647687" TextAlignment="Center" 
-                           TextWrapping="Wrap" Margin="0,0,0,40"/>
-
-                <Button Content="Log In" Height="50" FontSize="16" FontWeight="SemiBold" 
-                        Background="#246B8E" Foreground="White" BorderThickness="0" Margin="0,0,0,15" Cursor="Hand"
+            <StackPanel VerticalAlignment="Center" HorizontalAlignment="Center" Width="340">
+                <TextBlock Text="Library Administrator"
+                           FontSize="32"
+                           FontWeight="Bold"
+                           Foreground="#173B59"
+                           TextAlignment="Center"
+                           Margin="0,0,0,10"/>
+                <TextBlock Text="Sign in to manage the library, readers, and overdue loans."
+                           FontSize="14"
+                           Foreground="#647687"
+                           TextAlignment="Center"
+                           TextWrapping="Wrap"
+                           Margin="0,0,0,40"/>
+                <Button Content="Log In"
+                        Height="50"
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        Background="#246B8E"
+                        Foreground="White"
+                        BorderThickness="0"
+                        Margin="0,0,0,15"
+                        Cursor="Hand"
                         Command="{Binding OpenLoginCommand}">
                     <Button.Resources>
                         <Style TargetType="Border">
@@ -35,10 +44,16 @@
                         </Style>
                     </Button.Resources>
                 </Button>
-
-                <Button Content="Register" Height="50" FontSize="16" FontWeight="SemiBold" 
-                        Background="White" Foreground="#246B8E" BorderBrush="#246B8E" BorderThickness="2" 
-                        Cursor="Hand" Command="{Binding OpenRegisterCommand}">
+                <Button Content="Register"
+                        Height="50"
+                        FontSize="16"
+                        FontWeight="SemiBold"
+                        Background="White"
+                        Foreground="#246B8E"
+                        BorderBrush="#246B8E"
+                        BorderThickness="2"
+                        Cursor="Hand"
+                        Command="{Binding OpenRegisterCommand}">
                     <Button.Resources>
                         <Style TargetType="Border">
                             <Setter Property="CornerRadius" Value="8"/>
