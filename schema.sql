@@ -1,11 +1,9 @@
 BEGIN;
 
-TRUNCATE TABLE reservations, loans, book_copies, book_genres, book_authors, books, genres, authors, users RESTART IDENTITY CASCADE;
-
 -- 1. РОЗШИРЕННЯ
 CREATE EXTENSION IF NOT EXISTS pg_trgm;   
 
--- 2. ДОМЕНИ (якщо ще не створені, CREATE TABLE IF NOT EXISTS/DO)
+-- 2. ДОМЕНИ 
 
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'email_address') THEN
@@ -219,11 +217,11 @@ ORDER BY loans_count DESC;
 
 -- 8. ТЕСТОВІ ДАНІ ЗІ СКИНУТИМИ ІДЕНТИФІКАТОРАМИ
 INSERT INTO users (full_name, email, password_hash, role) VALUES
-('Олена Бондаренко', 'olena.b@gmail.com', '$2a$12$e83...hash1', 'reader'),
-('Іван Ковальчук', 'ivan.k@gmail.com', '$2a$12$e83...hash2', 'reader'),
-('Марія Ткаченко', 'maria.t@gmail.com', '$2a$12$e83...hash3', 'reader'),
-('Оксана Мандзювата', 'o.mandzyuvata@smartlib.ua', '$2a$12$e83...hash4', 'librarian'),
-('Софія Шелеп', 's.shelep@smartlib.ua', '$2a$12$e83...hash5', 'admin');
+('Олена Бондаренко', 'olena.b@gmail.com', 'pbkdf2-sha256$210000$eSmTTHQLnU28EhmlAy+2Ww==$PtZIag7Bzhfm8uKde6lPJbt2B9Y2/+sW+Ip31JSQWDE=', 'reader'),
+('Іван Ковальчук', 'ivan.k@gmail.com', 'pbkdf2-sha256$210000$eSmTTHQLnU28EhmlAy+2Ww==$PtZIag7Bzhfm8uKde6lPJbt2B9Y2/+sW+Ip31JSQWDE=', 'reader'),
+('Марія Ткаченко', 'maria.t@gmail.com', 'pbkdf2-sha256$210000$eSmTTHQLnU28EhmlAy+2Ww==$PtZIag7Bzhfm8uKde6lPJbt2B9Y2/+sW+Ip31JSQWDE=', 'reader'),
+('Оксана Мандзювата', 'o.mandzyuvata@smartlib.ua', 'pbkdf2-sha256$210000$eSmTTHQLnU28EhmlAy+2Ww==$PtZIag7Bzhfm8uKde6lPJbt2B9Y2/+sW+Ip31JSQWDE=', 'librarian'),
+('Софія Шелеп', 's.shelep@smartlib.ua', 'pbkdf2-sha256$210000$eSmTTHQLnU28EhmlAy+2Ww==$PtZIag7Bzhfm8uKde6lPJbt2B9Y2/+sW+Ip31JSQWDE=', 'admin');
 
 INSERT INTO authors (full_name, birth_year, country) VALUES
 ('Тарас Шевченко', 1814, 'Україна'),

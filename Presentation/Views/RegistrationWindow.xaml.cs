@@ -8,8 +8,23 @@ namespace Presentation.Views
         public RegistrationWindow()
         {
             InitializeComponent();
-
             DataContext = new RegistrationViewModel(this);
+        }
+
+        private void PasswordInput_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is RegistrationViewModel viewModel)
+            {
+                viewModel.Password = PasswordInput.Password;
+            }
+        }
+
+        private void ConfirmPasswordInput_PasswordChanged(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is RegistrationViewModel viewModel)
+            {
+                viewModel.ConfirmPassword = ConfirmPasswordInput.Password;
+            }
         }
     }
 }

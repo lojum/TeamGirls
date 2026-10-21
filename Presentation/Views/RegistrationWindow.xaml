@@ -73,28 +73,33 @@
                                    Margin="0,0,0,24"/>
 
                         <TextBlock Text="Full Name" Style="{StaticResource FieldLabelStyle}"/>
-                        <TextBox x:Name="NameInput"
-                                 Style="{StaticResource InputStyle}"
-                                 Margin="0,0,0,4"/>
-                        <TextBlock x:Name="NameErrorText" Style="{StaticResource FieldErrorStyle}"/>
+                        <TextBox x:Name="NameInput" Style="{StaticResource InputStyle}" Margin="0,0,0,4" Text="{Binding FullName, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock x:Name="NameErrorText"
+                                   Text="Enter a name of up to 150 characters."
+                                   Style="{StaticResource FieldErrorStyle}"
+                                   Visibility="{Binding NameErrorVisibility}"/>
 
                         <TextBlock Text="Email" Style="{StaticResource FieldLabelStyle}" Margin="0,12,0,7"/>
-                        <TextBox x:Name="EmailInput"
-                                 Style="{StaticResource InputStyle}"
-                                 Margin="0,0,0,4"/>
-                        <TextBlock x:Name="EmailErrorText" Style="{StaticResource FieldErrorStyle}"/>
+                        <TextBox x:Name="EmailInput" Style="{StaticResource InputStyle}" Margin="0,0,0,4" Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"/>
+                        <TextBlock x:Name="EmailErrorText"
+                                   Text="Enter a valid email address."
+                                   Style="{StaticResource FieldErrorStyle}"
+                                   Visibility="{Binding EmailErrorVisibility}"/>
 
                         <TextBlock Text="Password" Style="{StaticResource FieldLabelStyle}" Margin="0,12,0,7"/>
-                        <PasswordBox x:Name="PasswordInput"
-                                     Style="{StaticResource PasswordInputStyle}"
-                                     Margin="0,0,0,4"/>
-                        <TextBlock x:Name="PasswordErrorText" Style="{StaticResource FieldErrorStyle}"/>
+                        <PasswordBox x:Name="PasswordInput" Style="{StaticResource PasswordInputStyle}" Margin="0,0,0,4" PasswordChanged="PasswordInput_PasswordChanged"/>
+                        <TextBlock x:Name="PasswordErrorText"
+                                   Text="Password must contain at least 8 characters."
+                                   Style="{StaticResource FieldErrorStyle}"
+                                   Visibility="{Binding PasswordErrorVisibility}"/>
 
                         <TextBlock Text="Confirm Password" Style="{StaticResource FieldLabelStyle}" Margin="0,12,0,7"/>
-                        <PasswordBox x:Name="ConfirmPasswordInput"
-                                     Style="{StaticResource PasswordInputStyle}"
-                                     Margin="0,0,0,4"/>
-                        <TextBlock x:Name="ConfirmPasswordErrorText" Style="{StaticResource FieldErrorStyle}" Margin="0,4,0,16"/>
+                        <PasswordBox x:Name="ConfirmPasswordInput" Style="{StaticResource PasswordInputStyle}" Margin="0,0,0,4" PasswordChanged="ConfirmPasswordInput_PasswordChanged"/>
+                        <TextBlock x:Name="ConfirmPasswordErrorText"
+                                   Text="Passwords do not match."
+                                   Style="{StaticResource FieldErrorStyle}"
+                                   Margin="0,4,0,16"
+                                   Visibility="{Binding ConfirmPasswordErrorVisibility}"/>
 
                         <Button x:Name="RegisterSubmitBtn"
                                 Content="Create Account"
@@ -104,9 +109,10 @@
                                 Background="#246B8E"
                                 Foreground="White"
                                 BorderThickness="0"
-                                IsEnabled="False"
                                 Cursor="Hand"
-                                Margin="0,0,0,8">
+                                Margin="0,0,0,8"
+                                Command="{Binding RegisterCommand}"
+                                IsEnabled="{Binding IsSubmitEnabled}">
                             <Button.Resources>
                                 <Style TargetType="Border">
                                     <Setter Property="CornerRadius" Value="8"/>

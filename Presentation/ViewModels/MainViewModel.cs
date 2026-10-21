@@ -7,7 +7,7 @@ namespace Presentation.ViewModels
 {
     public class MainViewModel
     {
-        private Window _currentWindow;
+        private readonly Window _currentWindow;
 
         public ICommand OpenLoginCommand { get; }
         public ICommand OpenRegisterCommand { get; }
@@ -15,22 +15,14 @@ namespace Presentation.ViewModels
         public MainViewModel(Window currentWindow)
         {
             _currentWindow = currentWindow;
-
-            OpenLoginCommand = new RelayCommand(ExecuteOpenLogin);
-            OpenRegisterCommand = new RelayCommand(ExecuteOpenRegister);
+            OpenLoginCommand = new RelayCommand(_ => OpenWindow(new LoginWindow()));
+            OpenRegisterCommand = new RelayCommand(_ => OpenWindow(new RegistrationWindow()));
         }
 
-        private void ExecuteOpenLogin(object? obj)
+        private void OpenWindow(Window window)
         {
-            var loginWindow = new LoginWindow();
-            loginWindow.Show();
-            _currentWindow.Close();
-        }
-
-        private void ExecuteOpenRegister(object? obj)
-        {
-            var regWindow = new RegistrationWindow();
-            regWindow.Show();
+            window.Show();
+            Application.Current.MainWindow = window;
             _currentWindow.Close();
         }
     }
