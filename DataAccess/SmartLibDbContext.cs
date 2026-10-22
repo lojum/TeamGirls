@@ -13,6 +13,7 @@ namespace DataAccess
         public DbSet<BookCopy> BookCopies { get; set; }
         public DbSet<Loan> Loans { get; set; }
         public DbSet<Reservation> Reservations { get; set; }
+        public virtual DbSet<BookCatalogView> BookCatalogViews { get; set; }
 
         public SmartLibDbContext(DbContextOptions<SmartLibDbContext> options) : base(options)
         {
@@ -53,6 +54,10 @@ namespace DataAccess
                 .HasOne(l => l.Librarian)
                 .WithMany(u => u.LoansAsLibrarian)
                 .HasForeignKey(l => l.LibrarianId);
+
+            modelBuilder.Entity<BookCatalogView>()
+                .HasNoKey()
+                .ToView("v_book_catalog");
         }
     }
 }
