@@ -1,25 +1,9 @@
--- =====================================================================
--- SmartLib: ЄДИНИЙ скрипт (PostgreSQL)
---
--- Працює в обох випадках, нічого не видаляє:
---   * на ІСНУЮЧІЙ базі зі старою схемою: додає нові колонки, таблиці,
---     індекси, оновлює тригер і представлення, дані зберігаються;
---   * на ПОРОЖНІЙ базі: створює всю схему й тестові дані.
--- Скрипт ідемпотентний (можна запускати повторно) і виконується
--- однією транзакцією: при помилці нічого не змінюється.
--- Запускайте ЦІЛКОМ, одним натисканням.
--- =====================================================================
-
 BEGIN;
 
--- ---------------------------------------------------------------------
 -- 1. РОЗШИРЕННЯ
--- ---------------------------------------------------------------------
 CREATE EXTENSION IF NOT EXISTS pg_trgm;
 
--- ---------------------------------------------------------------------
 -- 2. ДОМЕНИ
--- ---------------------------------------------------------------------
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'email_address') THEN
         CREATE DOMAIN email_address AS VARCHAR(255)
@@ -46,9 +30,7 @@ DO $$ BEGIN
     END IF;
 END $$;
 
--- ---------------------------------------------------------------------
 -- 3. ПЕРЕЛІКИ (ENUM)
--- ---------------------------------------------------------------------
 DO $$ BEGIN
     IF NOT EXISTS (SELECT 1 FROM pg_type WHERE typname = 'user_role') THEN
         CREATE TYPE user_role AS ENUM ('reader', 'librarian', 'admin');
@@ -61,9 +43,7 @@ DO $$ BEGIN
     END IF;
 END $$;
 
--- ---------------------------------------------------------------------
 -- 4. ТАБЛИЦІ (наявні пропускаються, їх доповнює розділ 5)
--- ---------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS users (
     user_id       BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
     full_name     person_name   NOT NULL,
@@ -169,9 +149,7 @@ CREATE TABLE IF NOT EXISTS reservations (
     CONSTRAINT ck_reservation_period CHECK (expires_at > reserved_at)
 );
 
--- ---------------------------------------------------------------------
 -- 5. ДОПОВНЕННЯ НАЯВНИХ ТАБЛИЦЬ ДО НОВОЇ СХЕМИ
--- ---------------------------------------------------------------------
 ALTER TABLE books
     ADD COLUMN IF NOT EXISTS language  VARCHAR(10) NOT NULL DEFAULT 'uk',
     ADD COLUMN IF NOT EXISTS cover_url TEXT;
@@ -197,9 +175,7 @@ DO $$ BEGIN
     END IF;
 END $$;
 
--- ---------------------------------------------------------------------
 -- 6. ІНДЕКСИ
--- ---------------------------------------------------------------------
 -- Один активний (неповернений) запис видачі на примірник
 CREATE UNIQUE INDEX IF NOT EXISTS ux_loans_one_active_per_copy
     ON loans (copy_id) WHERE returned_at IS NULL;
@@ -220,12 +196,7 @@ CREATE INDEX IF NOT EXISTS ix_fines_loan           ON fines (loan_id);
 CREATE INDEX IF NOT EXISTS ix_reservations_book    ON reservations (book_id, status);
 CREATE INDEX IF NOT EXISTS ix_reservations_queue   ON reservations (book_id, reserved_at) WHERE status = 'active';
 
--- ---------------------------------------------------------------------
--- 7. ТРИГЕР синхронізації статусу примірника (copy_status) з видачами
---    INSERT неповернутої видачі -> on_loan
---    INSERT уже повернутої (історичний запис) -> статус не змінюється
---    UPDATE returned_at -> available
--- ---------------------------------------------------------------------
+-- 7. ТРИГЕР синхронізації статусу примірника (copy_status) 
 CREATE OR REPLACE FUNCTION fn_loan_sync_copy_status() RETURNS trigger AS $$
 DECLARE
     v_status copy_status;
@@ -256,13 +227,9 @@ CREATE TRIGGER trg_loans_sync_copy
 AFTER INSERT OR UPDATE OF returned_at ON loans
 FOR EACH ROW EXECUTE FUNCTION fn_loan_sync_copy_status();
 
--- ---------------------------------------------------------------------
 -- 8. ПРЕДСТАВЛЕННЯ (VIEWS)
---    Спершу видаляємо: CREATE OR REPLACE не вміє додавати колонки
---    посеред списку. Дані таблиць це не зачіпає.
--- ---------------------------------------------------------------------
-DROP VIEW IF EXISTS v_loans_by_genre, v_monthly_loans, v_popular_books,
-                    v_overdue_loans, v_active_loans, v_book_catalog;
+--DROP VIEW IF EXISTS v_loans_by_genre, v_monthly_loans, v_popular_books,
+                    --v_overdue_loans, v_active_loans, v_book_catalog;
 
 CREATE VIEW v_book_catalog AS
 SELECT
@@ -326,9 +293,7 @@ LEFT JOIN loans l        ON l.copy_id = c.copy_id
 GROUP BY g.name
 ORDER BY loans_count DESC;
 
--- ---------------------------------------------------------------------
 -- 9. ВИПРАВЛЕННЯ НАЯВНИХ ДАНИХ
--- ---------------------------------------------------------------------
 -- Старий тригер лишав примірник on_loan навіть після повернення
 -- (історичний запис). Повертаємо available там, де активної видачі немає.
 UPDATE book_copies c
@@ -358,12 +323,7 @@ JOIN locations loc ON loc.room = m.room AND loc.shelf = m.shelf
 WHERE c.inventory_number = m.inv
   AND c.location_id IS NULL;
 
--- ---------------------------------------------------------------------
--- 10. ТЕСТОВІ ДАНІ: лише якщо база порожня (немає користувачів і книг).
---     Зв'язки задаються за природними ключами (email, ISBN, інвентарний
---     номер), а не за номерами id, тому працює за будь-якого стану
---     послідовностей.
--- ---------------------------------------------------------------------
+-- 10. ТЕСТОВІ ДАНІ: 
 DO $seed$
 BEGIN
     IF EXISTS (SELECT 1 FROM users) OR EXISTS (SELECT 1 FROM books) THEN
