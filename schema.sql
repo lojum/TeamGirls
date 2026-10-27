@@ -1,7 +1,7 @@
 BEGIN;
 
 -- 1. РОЗШИРЕННЯ
-CREATE EXTENSION IF NOT EXISTS pg_trgm;
+CREATE EXTENSION IF NOT EXISTS pg_trgm;   
 
 -- 2. ДОМЕНИ
 DO $$ BEGIN

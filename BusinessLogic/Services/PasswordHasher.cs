@@ -1,6 +1,6 @@
 using System.Security.Cryptography;
 
-namespace Presentation.Services
+namespace BusinessLogic.Services
 {
     public static class PasswordHasher
     {
