@@ -415,6 +415,24 @@ BEGIN
                (SELECT user_id FROM users WHERE email = 'ivan.k@gmail.com'),
                (SELECT user_id FROM users WHERE email = 'o.mandzyuvata@smartlib.ua'),
                NOW() - INTERVAL '20 days', CURRENT_DATE - 6;
+<<<<<<< Updated upstream
+=======
+
+        -- Штраф за прострочену видачу 3
+        INSERT INTO fines (loan_id, amount, is_paid)
+        SELECT l.loan_id, 50.00, FALSE
+        FROM loans l
+        JOIN book_copies c ON c.copy_id = l.copy_id
+        WHERE c.inventory_number = 'INV-00301' AND l.returned_at IS NULL;
+
+        INSERT INTO reservations (book_id, reader_id, reserved_at, expires_at, status)
+        SELECT (SELECT book_id FROM books WHERE isbn = '978-966-03-8002-8'),
+               (SELECT user_id FROM users WHERE email = 'maria.t@gmail.com'),
+               NOW(), NOW() + INTERVAL '3 days', 'active';
+    END IF;
+END
+$seed$;
+>>>>>>> Stashed changes
 
         -- Штраф за прострочену видачу 3
         INSERT INTO fines (loan_id, amount, is_paid)
