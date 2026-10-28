@@ -14,12 +14,13 @@ using Npgsql;
 using Presentation.Commands;
 using BusinessLogic.Services;
 using Presentation.Views;
+using Presentation.Validators; 
 
 namespace Presentation.ViewModels
 {
     public class RegistrationViewModel : INotifyPropertyChanged
     {
-        private readonly Window _currentWindow;
+        private readonly Window? _currentWindow;
 
         private string _fullName = "";
         private string _email = "";
@@ -46,7 +47,7 @@ namespace Presentation.ViewModels
         public ICommand RegisterCommand { get; }
         public ICommand BackCommand { get; }
 
-        public RegistrationViewModel(Window currentWindow)
+        public RegistrationViewModel(Window? currentWindow)
         {
             _currentWindow = currentWindow;
             BackCommand = new RelayCommand(ExecuteBack);
@@ -55,45 +56,28 @@ namespace Presentation.ViewModels
 
         private void ValidateInput()
         {
-            IsSubmitEnabled = !string.IsNullOrWhiteSpace(FullName) && 
-                              !string.IsNullOrWhiteSpace(Email) && 
-                              !string.IsNullOrEmpty(Password) && 
-                              !string.IsNullOrEmpty(ConfirmPassword);
+            
+            IsSubmitEnabled = RegistrationValidator.IsValidInput(FullName, Email, Password, ConfirmPassword);
         }
 
         private async void ExecuteRegister(object? obj)
         {
-            bool isValid = true;
+           
+            bool isNameValid = !string.IsNullOrWhiteSpace(FullName) && FullName.Length <= 150;
+            NameErrorVisibility = isNameValid ? Visibility.Collapsed : Visibility.Visible;
 
-            if (FullName.Trim().Length == 0 || FullName.Length > 150)
-            {
-                NameErrorVisibility = Visibility.Visible;
-                isValid = false;
-            }
-            else NameErrorVisibility = Visibility.Collapsed;
+            bool isEmailValid = !string.IsNullOrWhiteSpace(Email) && MailAddress.TryCreate(Email, out _);
+            EmailErrorVisibility = isEmailValid ? Visibility.Collapsed : Visibility.Visible;
 
-            if (!MailAddress.TryCreate(Email, out _))
-            {
-                EmailErrorVisibility = Visibility.Visible;
-                isValid = false;
-            }
-            else EmailErrorVisibility = Visibility.Collapsed;
+            bool isPasswordValid = !string.IsNullOrWhiteSpace(Password) && Password.Length >= 8;
+            PasswordErrorVisibility = isPasswordValid ? Visibility.Collapsed : Visibility.Visible;
 
-            if (Password.Length < 8)
-            {
-                PasswordErrorVisibility = Visibility.Visible;
-                isValid = false;
-            }
-            else PasswordErrorVisibility = Visibility.Collapsed;
+            bool isConfirmPasswordValid = Password == ConfirmPassword;
+            ConfirmPasswordErrorVisibility = isConfirmPasswordValid ? Visibility.Collapsed : Visibility.Visible;
 
-            if (Password != ConfirmPassword)
-            {
-                ConfirmPasswordErrorVisibility = Visibility.Visible;
-                isValid = false;
-            }
-            else ConfirmPasswordErrorVisibility = Visibility.Collapsed;
-
-            if (!isValid) return;
+            
+            if (!isNameValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid)
+                return;
 
             IsSubmitEnabled = false;
 
@@ -106,7 +90,6 @@ namespace Presentation.ViewModels
                 {
                     FullName = FullName.Trim(),
                     Email = Email.Trim(),
-                    // Якщо компілятор підкреслить PasswordHasher, переконайся, що цей клас існує в Presentation.Services
                     PasswordHash = PasswordHasher.Hash(Password), 
                     Role = UserRole.Reader
                 };
@@ -119,13 +102,14 @@ namespace Presentation.ViewModels
                 var mainWindow = new MainWindow();
                 mainWindow.Show();
                 Application.Current.MainWindow = mainWindow;
-                _currentWindow.Close();
+                
+               
+                _currentWindow?.Close();
             }
             catch (DbUpdateException ex)
             {
                 IsSubmitEnabled = true;
                 
-                // Перевіряємо, чи це саме помилка унікальності PostgreSQL (код 23505)
                 if (ex.InnerException is PostgresException pgEx && pgEx.SqlState == PostgresErrorCodes.UniqueViolation)
                 {
                     MessageBox.Show("An account with this email address already exists.", "Registration error", MessageBoxButton.OK, MessageBoxImage.Warning);
@@ -147,7 +131,8 @@ namespace Presentation.ViewModels
             var mainWindow = new MainWindow();
             mainWindow.Show();
             Application.Current.MainWindow = mainWindow;
-            _currentWindow.Close();
+            
+            _currentWindow?.Close();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;
