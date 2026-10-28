@@ -80,7 +80,7 @@ namespace Presentation.ViewModels
                 using var scope = App.ServiceProvider.CreateScope();
                 var db = scope.ServiceProvider.GetRequiredService<SmartLibDbContext>();
 
-                var user = await db.Users.FirstOrDefaultAsync(u => u.Email == Email.Trim());
+                var user = await db.Users.FirstOrDefaultAsync(u => u.Email.ToLower() == Email.Trim().ToLower());
 
                 if (user == null || !user.IsActive || !PasswordHasher.Verify(Password, user.PasswordHash))
                 {

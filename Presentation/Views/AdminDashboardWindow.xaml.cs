@@ -9,7 +9,11 @@ namespace Presentation.Views
         {
             InitializeComponent();
             
-            DataContext = new AdminDashboardViewModel(this, currentAdminName);
+            var viewModel = new AdminDashboardViewModel(this, currentAdminName);
+
+            DataContext = viewModel;
+
+            Loaded += async (sender, args) => await viewModel.LoadAsync();
         }
     }
 }
