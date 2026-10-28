@@ -231,7 +231,7 @@ FOR EACH ROW EXECUTE FUNCTION fn_loan_sync_copy_status();
 --DROP VIEW IF EXISTS v_loans_by_genre, v_monthly_loans, v_popular_books,
                     --v_overdue_loans, v_active_loans, v_book_catalog;
 
-CREATE VIEW v_book_catalog AS
+CREATE OR REPLACE VIEW v_book_catalog AS
 SELECT
     b.book_id,
     b.title,
@@ -252,7 +252,7 @@ SELECT
       WHERE c.book_id = b.book_id AND c.status = 'available')    AS available_copies
 FROM books b;
 
-CREATE VIEW v_active_loans AS
+CREATE OR REPLACE VIEW v_active_loans AS
 SELECT l.loan_id, l.loaned_at, l.due_date, l.renewal_count,
        u.user_id AS reader_id, u.full_name AS reader_name, u.email AS reader_email,
        c.copy_id, c.inventory_number, b.book_id, b.title,
@@ -265,10 +265,10 @@ JOIN books b            ON b.book_id = c.book_id
 LEFT JOIN locations loc ON loc.location_id = c.location_id
 WHERE l.returned_at IS NULL;
 
-CREATE VIEW v_overdue_loans AS
+CREATE OR REPLACE VIEW v_overdue_loans AS
 SELECT * FROM v_active_loans WHERE days_overdue > 0;
 
-CREATE VIEW v_popular_books AS
+CREATE OR REPLACE VIEW v_popular_books AS
 SELECT b.book_id, b.title, count(l.loan_id) AS loans_count
 FROM books b
 LEFT JOIN book_copies c ON c.book_id = b.book_id
@@ -276,7 +276,7 @@ LEFT JOIN loans l       ON l.copy_id = c.copy_id
 GROUP BY b.book_id, b.title
 ORDER BY loans_count DESC, b.title;
 
-CREATE VIEW v_monthly_loans AS
+CREATE OR REPLACE VIEW v_monthly_loans AS
 SELECT date_trunc('month', loaned_at)::date AS month,
        count(*)                             AS loans_count,
        count(returned_at)                   AS returned_count
@@ -284,7 +284,7 @@ FROM loans
 GROUP BY 1
 ORDER BY 1;
 
-CREATE VIEW v_loans_by_genre AS
+CREATE OR REPLACE VIEW v_loans_by_genre AS
 SELECT g.name AS genre, count(l.loan_id) AS loans_count
 FROM genres g
 LEFT JOIN book_genres bg ON bg.genre_id = g.genre_id
