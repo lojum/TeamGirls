@@ -105,8 +105,7 @@ namespace Presentation.ViewModels
                 var user = new User
                 {
                     FullName = FullName.Trim(),
-                    Email = Email.Trim(),
-                    // Якщо компілятор підкреслить PasswordHasher, переконайся, що цей клас існує в Presentation.Services
+                    Email = AuthService.NormalizeEmail(Email),
                     PasswordHash = PasswordHasher.Hash(Password), 
                     Role = UserRole.Reader
                 };

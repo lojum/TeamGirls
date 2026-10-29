@@ -4,9 +4,7 @@ using System.Net.Mail;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
-using DataAccess;
 using Domain.Enums;
-using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Presentation.Commands;
 using BusinessLogic.Services;
@@ -78,11 +76,11 @@ namespace Presentation.ViewModels
             try
             {
                 using var scope = App.ServiceProvider.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<SmartLibDbContext>();
+                var authService = scope.ServiceProvider.GetRequiredService<IAuthService>();
 
-                var user = await db.Users.FirstOrDefaultAsync(u => u.Email == Email.Trim());
+                var user = await authService.AuthenticateAsync(Email, Password);
 
-                if (user == null || !user.IsActive || !PasswordHasher.Verify(Password, user.PasswordHash))
+                if (user == null)
                 {
                     LoginErrorMessage = "Incorrect email or password, or the account is inactive.";
                     LoginErrorVisibility = Visibility.Visible;
@@ -92,7 +90,6 @@ namespace Presentation.ViewModels
 
                 if (user.Role == UserRole.Admin)
                 {
-                    // Якщо адмін - відкриваємо адмінку
                     var dashboard = new AdminDashboardWindow(user.FullName);
                     dashboard.Show();
                     Application.Current.MainWindow = dashboard;
@@ -102,6 +99,12 @@ namespace Presentation.ViewModels
                     var readerDashboard = new ReaderDashboardWindow(user.FullName);
                     readerDashboard.Show();
                     Application.Current.MainWindow = readerDashboard;
+                }
+                else if (user.Role == UserRole.Librarian)
+                {
+                    var librarianDashboard = new LibrarianDashboardWindow(user.FullName, user.UserId);
+                    librarianDashboard.Show();
+                    Application.Current.MainWindow = librarianDashboard;
                 }
                 else
                 {

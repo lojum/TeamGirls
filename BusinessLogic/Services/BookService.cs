@@ -7,10 +7,9 @@ using DataAccess;
 
 namespace BusinessLogic.Services
 {
-    // Інтерфейс для ін'єкції залежностей
     public interface IBookService
     {
-        Task<List<Book>> SearchBooksAsync(string query);
+        Task<List<BookCatalogView>> SearchBooksAsync(string query);
     }
 
     public class BookService : IBookService
@@ -22,28 +21,25 @@ namespace BusinessLogic.Services
             _context = context;
         }
 
-        public async Task<List<Book>> SearchBooksAsync(string query)
+        public async Task<List<BookCatalogView>> SearchBooksAsync(string query)
         {
-            // Отримуємо книги разом із їхніми авторами та жанрами (для таблиці)
-            var booksQuery = _context.Books
-                .Include(b => b.Authors)
-                .Include(b => b.Genres)
-                .AsQueryable();
+            return await ApplySearch(_context.BookCatalogViews, query).AsNoTracking().ToListAsync();
+        }
 
-            // Якщо запит порожній - повертаємо всі книги. Якщо ні - фільтруємо.
-            if (!string.IsNullOrWhiteSpace(query))
-            {
-                var lowerQuery = query.ToLower();
+        // Фільтр винесено окремо, щоб його можна було перевірити модульними тестами без бази
+        public static IQueryable<BookCatalogView> ApplySearch(IQueryable<BookCatalogView> books, string? query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return books;
 
-                booksQuery = booksQuery.Where(b => 
-                    b.Title.ToLower().Contains(lowerQuery) || 
-                    b.Authors.Any(a => a.FullName.ToLower().Contains(lowerQuery)) ||
-                    b.Genres.Any(g => g.Name.ToLower().Contains(lowerQuery))
-                );
-            }
+            var lowerQuery = query.Trim().ToLower();
 
-            // Повертаємо результат швидко (до 2 секунд) завдяки AsNoTracking
-            return await booksQuery.AsNoTracking().ToListAsync();
+            return books.Where(b =>
+                b.Title.ToLower().Contains(lowerQuery) ||
+                b.Authors.ToLower().Contains(lowerQuery) ||
+                b.Genres.ToLower().Contains(lowerQuery) ||
+                b.PublicationYear.ToString() == lowerQuery
+            );
         }
     }
 }
