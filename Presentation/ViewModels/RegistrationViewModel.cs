@@ -105,7 +105,7 @@ namespace Presentation.ViewModels
                 var user = new User
                 {
                     FullName = FullName.Trim(),
-                    Email = Email.Trim().ToLower(),
+                    Email = AuthService.NormalizeEmail(Email),
                     PasswordHash = PasswordHasher.Hash(Password), 
                     Role = UserRole.Reader
                 };

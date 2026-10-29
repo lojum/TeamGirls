@@ -23,21 +23,23 @@ namespace BusinessLogic.Services
 
         public async Task<List<BookCatalogView>> SearchBooksAsync(string query)
         {
-            var booksQuery = _context.BookCatalogViews.AsQueryable();
+            return await ApplySearch(_context.BookCatalogViews, query).AsNoTracking().ToListAsync();
+        }
 
-            if (!string.IsNullOrWhiteSpace(query))
-            {
-                var lowerQuery = query.ToLower();
-                
-                booksQuery = booksQuery.Where(b => 
-                    b.Title.ToLower().Contains(lowerQuery) || 
-                    b.Authors.ToLower().Contains(lowerQuery) ||
-                    b.Genres.ToLower().Contains(lowerQuery) ||
-                    b.PublicationYear.ToString() == lowerQuery
-                );
-            }
+        // Фільтр винесено окремо, щоб його можна було перевірити модульними тестами без бази
+        public static IQueryable<BookCatalogView> ApplySearch(IQueryable<BookCatalogView> books, string? query)
+        {
+            if (string.IsNullOrWhiteSpace(query))
+                return books;
 
-            return await booksQuery.AsNoTracking().ToListAsync();
+            var lowerQuery = query.Trim().ToLower();
+
+            return books.Where(b =>
+                b.Title.ToLower().Contains(lowerQuery) ||
+                b.Authors.ToLower().Contains(lowerQuery) ||
+                b.Genres.ToLower().Contains(lowerQuery) ||
+                b.PublicationYear.ToString() == lowerQuery
+            );
         }
     }
 }

@@ -55,15 +55,15 @@ namespace Presentation.ViewModels
 
                 if (results.Count == 0 && !string.IsNullOrWhiteSpace(query))
                 {
-                    MessageBox.Show("За вашим запитом нічого не знайдено. Спробуйте змінити критерії пошуку.", 
-                                    "Результат пошуку", 
+                    MessageBox.Show("No results found for your search. Please try different criteria.", 
+                                    "Search Results", 
                                     MessageBoxButton.OK, 
                                     MessageBoxImage.Information);
                 }
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show($"Помилка завантаження каталогу:\n{ex.Message}", "Помилка", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Error loading directory:\n{ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 

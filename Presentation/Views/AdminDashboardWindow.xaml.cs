@@ -10,10 +10,18 @@ namespace Presentation.Views
             InitializeComponent();
             
             var viewModel = new AdminDashboardViewModel(this, currentAdminName);
-
             DataContext = viewModel;
-
-            Loaded += async (sender, args) => await viewModel.LoadAsync();
+            Loaded += async (_, _) =>
+            {
+                try
+                {
+                    await viewModel.LoadAsync();
+                }
+                catch (Exception)
+                {
+                    MessageBox.Show("Could not load dashboard data. Try again later.", "Database error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            };
         }
     }
 }
