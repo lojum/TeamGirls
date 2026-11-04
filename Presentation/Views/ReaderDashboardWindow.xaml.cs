@@ -5,10 +5,11 @@ namespace Presentation.Views
 {
     public partial class ReaderDashboardWindow : Window
     {
-        public ReaderDashboardWindow(string readerName)
+        public ReaderDashboardWindow(string readerName, ReaderDashboardViewModel viewModel)
         {
             InitializeComponent();
-            DataContext = new ReaderDashboardViewModel(this, readerName);
+            viewModel.SetReaderName(readerName);
+            DataContext = viewModel;
         }
     }
 }
