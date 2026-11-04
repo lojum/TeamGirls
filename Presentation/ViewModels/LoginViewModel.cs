@@ -4,19 +4,17 @@ using System.Net.Mail;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
-using DataAccess;
-using Domain.Enums;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
 using Presentation.Commands;
 using BusinessLogic.Services;
-using Presentation.Views;
+using Domain.Enums;
+using Presentation.Services;
 
 namespace Presentation.ViewModels
 {
     public class LoginViewModel : INotifyPropertyChanged
     {
-        private readonly Window _currentWindow;
+        private readonly IAuthService _authService;
+        private readonly IWindowNavigationService _navigationService;
         
         private string _email = "";
         private string _password = "";
@@ -39,9 +37,10 @@ namespace Presentation.ViewModels
         public ICommand LoginCommand { get; }
         public ICommand BackCommand { get; }
 
-        public LoginViewModel(Window currentWindow)
+        public LoginViewModel(IAuthService authService, IWindowNavigationService navigationService)
         {
-            _currentWindow = currentWindow;
+            _authService = authService;
+            _navigationService = navigationService;
             BackCommand = new RelayCommand(ExecuteBack);
             LoginCommand = new RelayCommand(ExecuteLogin);
         }
@@ -77,12 +76,8 @@ namespace Presentation.ViewModels
 
             try
             {
-                using var scope = App.ServiceProvider.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<SmartLibDbContext>();
-
-                var user = await db.Users.FirstOrDefaultAsync(u => u.Email == Email.Trim());
-
-                if (user == null || !user.IsActive || !PasswordHasher.Verify(Password, user.PasswordHash))
+                var user = await _authService.AuthenticateAsync(Email, Password);
+                if (user is null)
                 {
                     LoginErrorMessage = "Incorrect email or password, or the account is inactive.";
                     LoginErrorVisibility = Visibility.Visible;
@@ -92,26 +87,23 @@ namespace Presentation.ViewModels
 
                 if (user.Role == UserRole.Admin)
                 {
-                    // Якщо адмін - відкриваємо адмінку
-                    var dashboard = new AdminDashboardWindow(user.FullName);
-                    dashboard.Show();
-                    Application.Current.MainWindow = dashboard;
+                    _navigationService.ShowAdminDashboard(user.FullName);
                 }
                 else if (user.Role == UserRole.Reader)
                 {
-                    var readerDashboard = new ReaderDashboardWindow(user.FullName);
-                    readerDashboard.Show();
-                    Application.Current.MainWindow = readerDashboard;
+                    _navigationService.ShowReaderDashboard(user.FullName);
+                }
+                else if (user.Role == UserRole.Librarian)
+                {
+                    _navigationService.ShowLibrarianDashboard(user.FullName);
                 }
                 else
                 {
                     LoginErrorMessage = "This role interface is not implemented yet.";
                     LoginErrorVisibility = Visibility.Visible;
                     IsSubmitEnabled = true;
-                    return;
                 }
 
-                _currentWindow.Close();
             }
             catch (Exception)
             {
@@ -123,10 +115,7 @@ namespace Presentation.ViewModels
 
         private void ExecuteBack(object? obj)
         {
-            var mainWindow = new MainWindow();
-            mainWindow.Show();
-            Application.Current.MainWindow = mainWindow;
-            _currentWindow.Close();
+            _navigationService.ShowMain();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

@@ -5,21 +5,17 @@ using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
-using DataAccess;
-using Domain.Entities;
-using Domain.Enums;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
-using Npgsql;
 using Presentation.Commands;
 using BusinessLogic.Services;
-using Presentation.Views;
+using Presentation.Services;
+using Presentation.Validators;
 
 namespace Presentation.ViewModels
 {
     public class RegistrationViewModel : INotifyPropertyChanged
     {
-        private readonly Window _currentWindow;
+        private readonly IUserService _userService;
+        private readonly IWindowNavigationService _navigationService;
 
         private string _fullName = "";
         private string _email = "";
@@ -46,94 +42,53 @@ namespace Presentation.ViewModels
         public ICommand RegisterCommand { get; }
         public ICommand BackCommand { get; }
 
-        public RegistrationViewModel(Window currentWindow)
+        public RegistrationViewModel(IUserService userService, IWindowNavigationService navigationService)
         {
-            _currentWindow = currentWindow;
+            _userService = userService;
+            _navigationService = navigationService;
             BackCommand = new RelayCommand(ExecuteBack);
             RegisterCommand = new RelayCommand(ExecuteRegister);
         }
 
         private void ValidateInput()
         {
-            IsSubmitEnabled = !string.IsNullOrWhiteSpace(FullName) && 
-                              !string.IsNullOrWhiteSpace(Email) && 
-                              !string.IsNullOrEmpty(Password) && 
-                              !string.IsNullOrEmpty(ConfirmPassword);
+            
+            IsSubmitEnabled = RegistrationValidator.IsValidInput(FullName, Email, Password, ConfirmPassword);
         }
 
         private async void ExecuteRegister(object? obj)
         {
-            bool isValid = true;
+           
+            bool isNameValid = !string.IsNullOrWhiteSpace(FullName) && FullName.Length <= 150;
+            NameErrorVisibility = isNameValid ? Visibility.Collapsed : Visibility.Visible;
 
-            if (FullName.Trim().Length == 0 || FullName.Length > 150)
-            {
-                NameErrorVisibility = Visibility.Visible;
-                isValid = false;
-            }
-            else NameErrorVisibility = Visibility.Collapsed;
+            bool isEmailValid = !string.IsNullOrWhiteSpace(Email) && MailAddress.TryCreate(Email, out _);
+            EmailErrorVisibility = isEmailValid ? Visibility.Collapsed : Visibility.Visible;
 
-            if (!MailAddress.TryCreate(Email, out _))
-            {
-                EmailErrorVisibility = Visibility.Visible;
-                isValid = false;
-            }
-            else EmailErrorVisibility = Visibility.Collapsed;
+            bool isPasswordValid = !string.IsNullOrWhiteSpace(Password) && Password.Length >= 8;
+            PasswordErrorVisibility = isPasswordValid ? Visibility.Collapsed : Visibility.Visible;
 
-            if (Password.Length < 8)
-            {
-                PasswordErrorVisibility = Visibility.Visible;
-                isValid = false;
-            }
-            else PasswordErrorVisibility = Visibility.Collapsed;
+            bool isConfirmPasswordValid = Password == ConfirmPassword;
+            ConfirmPasswordErrorVisibility = isConfirmPasswordValid ? Visibility.Collapsed : Visibility.Visible;
 
-            if (Password != ConfirmPassword)
-            {
-                ConfirmPasswordErrorVisibility = Visibility.Visible;
-                isValid = false;
-            }
-            else ConfirmPasswordErrorVisibility = Visibility.Collapsed;
-
-            if (!isValid) return;
+            
+            if (!isNameValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid)
+                return;
 
             IsSubmitEnabled = false;
 
             try
             {
-                using var scope = App.ServiceProvider.CreateScope();
-                var db = scope.ServiceProvider.GetRequiredService<SmartLibDbContext>();
+                await _userService.RegisterReaderAsync(FullName, Email, Password);
 
-                var user = new User
-                {
-                    FullName = FullName.Trim(),
-                    Email = Email.Trim(),
-                    // Якщо компілятор підкреслить PasswordHasher, переконайся, що цей клас існує в Presentation.Services
-                    PasswordHash = PasswordHasher.Hash(Password), 
-                    Role = UserRole.Reader
-                };
+                MessageBox.Show("Reader account created. You can now sign in.", "Registration complete", MessageBoxButton.OK, MessageBoxImage.Information);
 
-                db.Users.Add(user);
-                await db.SaveChangesAsync();
-
-                MessageBox.Show("Reader account created. Reader sign-in will be available later.", "Registration complete", MessageBoxButton.OK, MessageBoxImage.Information);
-
-                var mainWindow = new MainWindow();
-                mainWindow.Show();
-                Application.Current.MainWindow = mainWindow;
-                _currentWindow.Close();
+                _navigationService.ShowMain();
             }
-            catch (DbUpdateException ex)
+            catch (DuplicateEmailException)
             {
                 IsSubmitEnabled = true;
-                
-                // Перевіряємо, чи це саме помилка унікальності PostgreSQL (код 23505)
-                if (ex.InnerException is PostgresException pgEx && pgEx.SqlState == PostgresErrorCodes.UniqueViolation)
-                {
-                    MessageBox.Show("An account with this email address already exists.", "Registration error", MessageBoxButton.OK, MessageBoxImage.Warning);
-                }
-                else
-                {
-                    MessageBox.Show("The database rejected the registration. Please check the entered information.", "Registration error", MessageBoxButton.OK, MessageBoxImage.Error);
-                }
+                MessageBox.Show("An account with this email address already exists.", "Registration error", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception)
             {
@@ -144,10 +99,7 @@ namespace Presentation.ViewModels
 
         private void ExecuteBack(object? obj)
         {
-            var mainWindow = new MainWindow();
-            mainWindow.Show();
-            Application.Current.MainWindow = mainWindow;
-            _currentWindow.Close();
+            _navigationService.ShowMain();
         }
 
         public event PropertyChangedEventHandler? PropertyChanged;

@@ -3,20 +3,17 @@ using System.ComponentModel;
 using System.Windows;
 using System.Windows.Data;
 using System.Windows.Input;
-using DataAccess;
-using Domain.Enums;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.Extensions.DependencyInjection;
+using BusinessLogic.Services;
 using Presentation.Commands;
-using Presentation.Views;
+using Presentation.Services;
 
 namespace Presentation.ViewModels
 {
     public sealed class AdminDashboardViewModel : INotifyPropertyChanged
     {
         private const int PageSize = 10;
-        private readonly Window _currentWindow;
-        private readonly string _currentAdminName;
+        private readonly IAdminDashboardService _dashboardService;
+        private readonly IWindowNavigationService _navigationService;
         private int _currentPage;
         private string _searchText = string.Empty;
         private string _selectedOverdueFilter = "0";
@@ -39,7 +36,7 @@ namespace Presentation.ViewModels
         public string TotalBooks { get; private set; } = "0";
         public string ActiveReaders { get; private set; } = "0";
         public string OverdueItems { get; private set; } = "0";
-        public string CurrentAdminName => _currentAdminName;
+        public string CurrentAdminName { get; private set; } = string.Empty;
 
         public string ActiveSection
         {
@@ -122,10 +119,12 @@ namespace Presentation.ViewModels
                 .Where(d => !int.TryParse(SelectedOverdueFilter, out var threshold)
                     || d.DaysOverdue >= threshold);
 
-        public AdminDashboardViewModel(Window currentWindow, string currentAdminName)
+        public AdminDashboardViewModel(
+            IAdminDashboardService dashboardService,
+            IWindowNavigationService navigationService)
         {
-            _currentWindow = currentWindow;
-            _currentAdminName = currentAdminName;
+            _dashboardService = dashboardService;
+            _navigationService = navigationService;
             CatalogView = CollectionViewSource.GetDefaultView(Catalog);
             ReadersView = CollectionViewSource.GetDefaultView(Readers);
             CatalogView.Filter = FilterCatalog;
@@ -141,83 +140,53 @@ namespace Presentation.ViewModels
             });
             PreviousPageCommand = new RelayCommand(_ => ChangePage(-1), _ => CanGoToPreviousPage);
             NextPageCommand = new RelayCommand(_ => ChangePage(1), _ => CanGoToNextPage);
-            LogOutCommand = new RelayCommand(_ =>
-            {
-                var welcomeWindow = new MainWindow();
-                welcomeWindow.Show();
-                Application.Current.MainWindow = welcomeWindow;
-                _currentWindow.Close();
-            });
+            LogOutCommand = new RelayCommand(_ => _navigationService.ShowMain());
+        }
+
+        public void SetAdminName(string adminName)
+        {
+            CurrentAdminName = adminName;
+            OnPropertyChanged(nameof(CurrentAdminName));
         }
 
         public async Task LoadAsync()
         {
-            using var scope = App.ServiceProvider.CreateScope();
-            var db = scope.ServiceProvider.GetRequiredService<SmartLibDbContext>();
-            var today = DateTime.UtcNow.Date;
+            var snapshot = await _dashboardService.GetSnapshotAsync();
 
-            var totalBooks = await db.Books.AsNoTracking().CountAsync();
-            var activeReaders = await db.Users.AsNoTracking()
-                .CountAsync(user => user.Role == UserRole.Reader && user.IsActive);
-            var overdueItems = await db.Loans.AsNoTracking()
-                .CountAsync(loan => loan.ReturnedAt == null && loan.DueDate < today);
-
-            var overdueLoans = await db.Loans.AsNoTracking()
-                .Where(loan => loan.ReturnedAt == null && loan.DueDate < today)
-                .Select(loan => new
-                {
-                    ReaderName = loan.Reader.FullName,
-                    BookTitle = loan.Copy.Book.Title,
-                    loan.DueDate
-                })
-                .ToListAsync();
-
-            var catalogBooks = await db.Books.AsNoTracking()
-                .Include(book => book.Authors)
-                .Include(book => book.Copies)
-                .OrderBy(book => book.Title)
-                .ToListAsync();
-
-            var readers = await db.Users.AsNoTracking()
-                .Where(user => user.Role == UserRole.Reader)
-                .OrderBy(user => user.FullName)
-                .Select(user => new ReaderRow(
-                    user.FullName,
-                    user.Email,
-                    user.IsActive ? "Active" : "Inactive",
-                    user.LoansAsReader.Count(loan => loan.ReturnedAt == null)))
-                .ToListAsync();
-
-            TotalBooks = totalBooks.ToString("N0");
-            ActiveReaders = activeReaders.ToString("N0");
-            OverdueItems = overdueItems.ToString("N0");
+            TotalBooks = snapshot.TotalBooks.ToString("N0");
+            ActiveReaders = snapshot.ActiveReaders.ToString("N0");
+            OverdueItems = snapshot.OverdueItems.ToString("N0");
             OnPropertyChanged(nameof(TotalBooks));
             OnPropertyChanged(nameof(ActiveReaders));
             OnPropertyChanged(nameof(OverdueItems));
 
             Debtors.Clear();
-            foreach (var loan in overdueLoans)
+            foreach (var loan in snapshot.OverdueLoans)
             {
                 Debtors.Add(new DebtorRow(
                     loan.ReaderName,
                     loan.BookTitle,
-                    Math.Max(0, (today - loan.DueDate.Date).Days)));
+                    loan.DaysOverdue));
             }
 
             Catalog.Clear();
-            foreach (var book in catalogBooks)
+            foreach (var book in snapshot.Catalog)
             {
                 Catalog.Add(new CatalogRow(
                     book.Title,
-                    string.Join(", ", book.Authors.Select(author => author.FullName)),
+                    book.Authors,
                     book.PublicationYear,
-                    book.Copies.Count));
+                    book.CopiesCount));
             }
 
             Readers.Clear();
-            foreach (var reader in readers)
+            foreach (var reader in snapshot.Readers)
             {
-                Readers.Add(reader);
+                Readers.Add(new ReaderRow(
+                    reader.FullName,
+                    reader.Email,
+                    reader.Status,
+                    reader.ActiveLoans));
             }
 
             CatalogView.Refresh();

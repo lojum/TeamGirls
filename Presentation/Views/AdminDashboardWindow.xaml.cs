@@ -5,11 +5,22 @@ namespace Presentation.Views
 {
     public partial class AdminDashboardWindow : Window
     {
-        public AdminDashboardWindow(string currentAdminName)
+        public AdminDashboardWindow(string currentAdminName, AdminDashboardViewModel viewModel)
         {
             InitializeComponent();
-            
-            DataContext = new AdminDashboardViewModel(this, currentAdminName);
+            viewModel.SetAdminName(currentAdminName);
+            DataContext = viewModel;
+            Loaded += async (_, _) =>
+            {
+                try
+                {
+                    await viewModel.LoadAsync();
+                }
+                catch (Exception)
+                {
+                    MessageBox.Show("Could not load dashboard data. Try again later.", "Database error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            };
         }
     }
 }
