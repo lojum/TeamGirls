@@ -2,21 +2,20 @@ using DataAccess;
 using Domain.Entities;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using SmartLib.Tests.TestData;
 
 namespace SmartLib.Tests.Helpers
 {
     // Окрема in-memory база для кожного тесту, щоб тести не впливали один на одного
     public static class TestDb
     {
-        public const string ReaderPassword = "Reader123!";
-
         public static SmartLibDbContext Create() =>
             new(new DbContextOptionsBuilder<SmartLibDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
                 .Options);
 
         public static User AddUser(SmartLibDbContext db, string email, UserRole role = UserRole.Reader,
-            bool isActive = true, string password = ReaderPassword, string fullName = "Олена Бондаренко")
+            bool isActive = true, string password = UserTestData.ReaderPassword, string fullName = UserTestData.ReaderName)
         {
             var user = new User
             {

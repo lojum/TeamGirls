@@ -4,151 +4,178 @@ using Domain.Entities;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
 using SmartLib.Tests.Helpers;
+using SmartLib.Tests.TestData;
+using static SmartLib.Tests.TestData.LoanTestData;
 
 namespace SmartLib.Tests.Services
 {
+    [Trait("Category", "Unit")]
     public class LoanServiceTests
     {
-        private const long LibrarianId = 100;
-        private const string ReaderEmail = "olena.b@gmail.com";
-        private static readonly DateTimeOffset Now = new(2026, 10, 28, 15, 30, 0, TimeSpan.Zero);
-
         private static (SmartLibDbContext Db, LoanService Service, BookCopy Copy) Arrange(
             CopyStatus copyStatus = CopyStatus.Available, bool readerActive = true)
         {
             var db = TestDb.Create();
-            TestDb.AddUser(db, ReaderEmail, isActive: readerActive);
-            var book = TestDb.AddBook(db, "Кобзар", "Тарас Шевченко", "Поезія");
-            var copy = TestDb.AddCopy(db, book, "INV-00101", copyStatus);
+            TestDb.AddUser(db, UserTestData.ReaderEmail, isActive: readerActive);
+            var book = TestDb.AddBook(db, BookTitle, BookAuthor, BookGenre);
+            var copy = TestDb.AddCopy(db, book, InventoryNumber, copyStatus);
             return (db, new LoanService(db, new FixedTimeProvider(Now)), copy);
         }
 
         [Fact]
         public async Task IssueBook_AvailableCopy_CreatesLoanWithDueDateIn14Days()
         {
+            // Arrange
             var (db, service, copy) = Arrange();
 
-            var loan = await service.IssueBookAsync("INV-00101", ReaderEmail, LibrarianId);
+            // Act
+            var loan = await service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId);
 
+            // Assert
             var saved = await db.Loans.SingleAsync();
             Assert.Equal(loan.LoanId, saved.LoanId);
             Assert.Equal(copy.CopyId, saved.CopyId);
             Assert.Equal(LibrarianId, saved.LibrarianId);
             Assert.Equal(Now.UtcDateTime, saved.LoanedAt);
-            Assert.Equal(new DateTime(2026, 11, 11), saved.DueDate);
+            Assert.Equal(ExpectedDueDate, saved.DueDate);
             Assert.Null(saved.ReturnedAt);
         }
 
         [Fact]
         public async Task IssueBook_Success_RaisesBookLoanedEvent()
         {
+            // Arrange
             var (_, service, _) = Arrange();
             LoanEventArgs? raised = null;
             service.BookLoaned += (_, e) => raised = e;
 
-            await service.IssueBookAsync("INV-00101", ReaderEmail, LibrarianId);
+            // Act
+            await service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId);
 
+            // Assert
             Assert.NotNull(raised);
-            Assert.Equal("Кобзар", raised.BookTitle);
-            Assert.Equal("Олена Бондаренко", raised.ReaderName);
+            Assert.Equal(BookTitle, raised.BookTitle);
+            Assert.Equal(UserTestData.ReaderName, raised.ReaderName);
         }
 
         [Fact]
         public async Task IssueBook_EmailInDifferentCase_FindsReader()
         {
+            // Arrange
             var (db, service, _) = Arrange();
 
-            await service.IssueBookAsync(" INV-00101 ", "  OLENA.B@gmail.com ", LibrarianId);
+            // Act
+            await service.IssueBookAsync($" {InventoryNumber} ", "  OLENA.B@gmail.com ", LibrarianId);
 
+            // Assert
             Assert.Equal(1, await db.Loans.CountAsync());
         }
 
         [Fact]
         public async Task IssueBook_UnknownReader_Throws()
         {
+            // Arrange
             var (_, service, _) = Arrange();
 
+            // Act
             var ex = await Assert.ThrowsAsync<LoanException>(
-                () => service.IssueBookAsync("INV-00101", "nobody@gmail.com", LibrarianId));
-            Assert.Contains("Reader with this email was not found", ex.Message);
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.UnknownEmail, LibrarianId));
+
+            // Assert
+            Assert.Contains(ReaderNotFoundMessage, ex.Message);
         }
 
         [Fact]
         public async Task IssueBook_EmailOfLibrarian_IsNotTreatedAsReader()
         {
+            // Arrange
             var (db, service, _) = Arrange();
-            TestDb.AddUser(db, "librarian@smartlib.ua", UserRole.Librarian);
+            TestDb.AddUser(db, UserTestData.LibrarianEmail, UserRole.Librarian);
 
+            // Act & Assert
             await Assert.ThrowsAsync<LoanException>(
-                () => service.IssueBookAsync("INV-00101", "librarian@smartlib.ua", LibrarianId));
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.LibrarianEmail, LibrarianId));
         }
 
         [Fact]
         public async Task IssueBook_InactiveReader_Throws()
         {
+            // Arrange
             var (db, service, _) = Arrange(readerActive: false);
 
+            // Act
             var ex = await Assert.ThrowsAsync<LoanException>(
-                () => service.IssueBookAsync("INV-00101", ReaderEmail, LibrarianId));
-            Assert.Contains("inactive", ex.Message);
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId));
+
+            // Assert
+            Assert.Contains(InactiveReaderMessage, ex.Message);
             Assert.Empty(db.Loans);
         }
 
         [Fact]
         public async Task IssueBook_UnknownInventoryNumber_Throws()
         {
+            // Arrange
             var (_, service, _) = Arrange();
 
+            // Act
             var ex = await Assert.ThrowsAsync<LoanException>(
-                () => service.IssueBookAsync("INV-99999", ReaderEmail, LibrarianId));
-            Assert.Contains("inventory number", ex.Message);
+                () => service.IssueBookAsync(UnknownInventoryNumber, UserTestData.ReaderEmail, LibrarianId));
+
+            // Assert
+            Assert.Contains(CopyNotFoundMessage, ex.Message);
         }
 
         [Theory]
-        [InlineData(CopyStatus.OnLoan)]
-        [InlineData(CopyStatus.Reserved)]
-        [InlineData(CopyStatus.WrittenOff)]
+        [MemberData(nameof(UnavailableStatuses), MemberType = typeof(LoanTestData))]
         public async Task IssueBook_CopyNotAvailable_Throws(CopyStatus status)
         {
+            // Arrange
             var (db, service, _) = Arrange(status);
 
+            // Act & Assert
             await Assert.ThrowsAsync<LoanException>(
-                () => service.IssueBookAsync("INV-00101", ReaderEmail, LibrarianId));
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId));
             Assert.Empty(db.Loans);
         }
 
         [Fact]
         public async Task IssueBook_SameCopyTwice_SecondCallThrows()
         {
+            // Arrange
             var (db, service, _) = Arrange();
-            await service.IssueBookAsync("INV-00101", ReaderEmail, LibrarianId);
+            await service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId);
 
+            // Act & Assert
             await Assert.ThrowsAsync<LoanException>(
-                () => service.IssueBookAsync("INV-00101", ReaderEmail, LibrarianId));
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId));
             Assert.Equal(1, await db.Loans.CountAsync());
         }
 
         [Fact]
         public async Task IssueBook_Failure_DoesNotRaiseEvent()
         {
+            // Arrange
             var (_, service, _) = Arrange(CopyStatus.WrittenOff);
             var raised = false;
             service.BookLoaned += (_, _) => raised = true;
 
+            // Act
             await Assert.ThrowsAsync<LoanException>(
-                () => service.IssueBookAsync("INV-00101", ReaderEmail, LibrarianId));
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId));
+
+            // Assert
             Assert.False(raised);
         }
 
         [Theory]
-        [InlineData("", ReaderEmail)]
-        [InlineData("   ", ReaderEmail)]
-        [InlineData("INV-00101", "")]
-        [InlineData("INV-00101", "   ")]
+        [MemberData(nameof(EmptyInputs), MemberType = typeof(LoanTestData))]
         public async Task IssueBook_EmptyInput_Throws(string inventoryNumber, string email)
         {
+            // Arrange
             var (_, service, _) = Arrange();
 
+            // Act & Assert
             await Assert.ThrowsAsync<LoanException>(
                 () => service.IssueBookAsync(inventoryNumber, email, LibrarianId));
         }
