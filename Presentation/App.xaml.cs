@@ -23,7 +23,6 @@ namespace Presentation
 
             try
             {
-                // Замінили GetCurrentDirectory на BaseDirectory - це найбезпечніший шлях у WPF
                 var builder = new ConfigurationBuilder()
                     .SetBasePath(AppDomain.CurrentDomain.BaseDirectory)
                     .AddJsonFile("appsettings.json", optional: false, reloadOnChange: true);
@@ -47,6 +46,8 @@ namespace Presentation
                            .UseSnakeCaseNamingConvention() 
                 );
 
+                services.AddSingleton(TimeProvider.System);
+                services.AddScoped<IAuthService, AuthService>();
                 services.AddScoped<IBookService, BookService>();
                 services.AddScoped<ILoanService, LoanService>();
 
@@ -57,7 +58,7 @@ namespace Presentation
             }
             catch (Exception ex)
             {
-                MessageBox.Show($"Критична помилка при запуску:\n{ex.Message}", "Помилка запуску", MessageBoxButton.OK, MessageBoxImage.Error);
+                MessageBox.Show($"Critical error on startup:\n{ex.Message}", "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 Current.Shutdown();
             }
         }

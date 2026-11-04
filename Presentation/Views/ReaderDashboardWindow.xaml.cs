@@ -1,4 +1,6 @@
 using System.Windows;
+using Microsoft.Extensions.DependencyInjection;
+using BusinessLogic.Services;
 using Presentation.ViewModels;
 
 namespace Presentation.Views
@@ -8,7 +10,11 @@ namespace Presentation.Views
         public ReaderDashboardWindow(string readerName)
         {
             InitializeComponent();
-            DataContext = new ReaderDashboardViewModel(this, readerName);
+            
+            var scope = App.ServiceProvider.CreateScope();
+            var bookService = scope.ServiceProvider.GetRequiredService<IBookService>();
+            
+            DataContext = new ReaderDashboardViewModel(this, readerName, bookService);
         }
     }
 }
