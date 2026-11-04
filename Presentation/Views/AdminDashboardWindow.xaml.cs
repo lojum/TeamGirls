@@ -10,7 +10,17 @@ namespace Presentation.Views
             InitializeComponent();
             viewModel.SetAdminName(currentAdminName);
             DataContext = viewModel;
-            Loaded += async (_, _) => await viewModel.LoadAsync();
+            Loaded += async (_, _) =>
+            {
+                try
+                {
+                    await viewModel.LoadAsync();
+                }
+                catch (Exception)
+                {
+                    MessageBox.Show("Could not load dashboard data. Try again later.", "Database error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+            };
         }
     }
 }

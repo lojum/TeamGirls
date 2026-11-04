@@ -43,9 +43,6 @@ namespace SmartLib.Tests
 
         private sealed class TestUserService : IUserService
         {
-            public Task<AuthenticatedUser?> AuthenticateAsync(string email, string password) =>
-                Task.FromResult<AuthenticatedUser?>(null);
-
             public Task RegisterReaderAsync(string fullName, string email, string password) =>
                 Task.CompletedTask;
         }

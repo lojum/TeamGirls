@@ -6,13 +6,14 @@ using System.Windows;
 using System.Windows.Input;
 using Presentation.Commands;
 using BusinessLogic.Services;
+using Domain.Enums;
 using Presentation.Services;
 
 namespace Presentation.ViewModels
 {
     public class LoginViewModel : INotifyPropertyChanged
     {
-        private readonly IUserService _userService;
+        private readonly IAuthService _authService;
         private readonly IWindowNavigationService _navigationService;
         
         private string _email = "";
@@ -36,9 +37,9 @@ namespace Presentation.ViewModels
         public ICommand LoginCommand { get; }
         public ICommand BackCommand { get; }
 
-        public LoginViewModel(IUserService userService, IWindowNavigationService navigationService)
+        public LoginViewModel(IAuthService authService, IWindowNavigationService navigationService)
         {
-            _userService = userService;
+            _authService = authService;
             _navigationService = navigationService;
             BackCommand = new RelayCommand(ExecuteBack);
             LoginCommand = new RelayCommand(ExecuteLogin);
@@ -75,7 +76,7 @@ namespace Presentation.ViewModels
 
             try
             {
-                var user = await _userService.AuthenticateAsync(Email, Password);
+                var user = await _authService.AuthenticateAsync(Email, Password);
                 if (user is null)
                 {
                     LoginErrorMessage = "Incorrect email or password, or the account is inactive.";
@@ -84,17 +85,23 @@ namespace Presentation.ViewModels
                     return;
                 }
 
-                if (user.IsAdmin)
+                if (user.Role == UserRole.Admin)
                 {
                     _navigationService.ShowAdminDashboard(user.FullName);
                 }
-                else if (user.IsReader)
+                else if (user.Role == UserRole.Reader)
                 {
                     _navigationService.ShowReaderDashboard(user.FullName);
                 }
-                else
+                else if (user.Role == UserRole.Librarian)
                 {
                     _navigationService.ShowLibrarianDashboard(user.FullName);
+                }
+                else
+                {
+                    LoginErrorMessage = "This role interface is not implemented yet.";
+                    LoginErrorVisibility = Visibility.Visible;
+                    IsSubmitEnabled = true;
                 }
 
             }

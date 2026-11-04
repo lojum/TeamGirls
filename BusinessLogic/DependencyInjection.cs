@@ -32,6 +32,8 @@ public static class DependencyInjection
 
         services.AddScoped<IBookService, BookService>();
         services.AddScoped<ILoanService, LoanService>();
+        services.AddSingleton(TimeProvider.System);
+        services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IUserService, UserService>();
         services.AddScoped<IAdminDashboardService, AdminDashboardService>();
 

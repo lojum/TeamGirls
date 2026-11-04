@@ -8,11 +8,8 @@ namespace BusinessLogic.Services;
 
 public interface IUserService
 {
-    Task<AuthenticatedUser?> AuthenticateAsync(string email, string password);
     Task RegisterReaderAsync(string fullName, string email, string password);
 }
-
-public sealed record AuthenticatedUser(string FullName, bool IsAdmin, bool IsReader);
 
 public sealed class DuplicateEmailException : Exception
 {
@@ -31,29 +28,12 @@ public sealed class UserService : IUserService
         _context = context;
     }
 
-    public async Task<AuthenticatedUser?> AuthenticateAsync(string email, string password)
-    {
-        var user = await _context.Users
-            .AsNoTracking()
-            .FirstOrDefaultAsync(user => user.Email == email.Trim());
-
-        if (user is null || !user.IsActive || !PasswordHasher.Verify(password, user.PasswordHash))
-        {
-            return null;
-        }
-
-        return new AuthenticatedUser(
-            user.FullName,
-            user.Role == UserRole.Admin,
-            user.Role == UserRole.Reader);
-    }
-
     public async Task RegisterReaderAsync(string fullName, string email, string password)
     {
         var user = new User
         {
             FullName = fullName.Trim(),
-            Email = email.Trim(),
+            Email = AuthService.NormalizeEmail(email),
             PasswordHash = PasswordHasher.Hash(password),
             Role = UserRole.Reader
         };
