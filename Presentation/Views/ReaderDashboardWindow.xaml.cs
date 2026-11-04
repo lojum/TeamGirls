@@ -1,20 +1,15 @@
 using System.Windows;
-using Microsoft.Extensions.DependencyInjection;
-using BusinessLogic.Services;
 using Presentation.ViewModels;
 
 namespace Presentation.Views
 {
     public partial class ReaderDashboardWindow : Window
     {
-        public ReaderDashboardWindow(string readerName)
+        public ReaderDashboardWindow(string readerName, ReaderDashboardViewModel viewModel)
         {
             InitializeComponent();
-            
-            var scope = App.ServiceProvider.CreateScope();
-            var bookService = scope.ServiceProvider.GetRequiredService<IBookService>();
-            
-            DataContext = new ReaderDashboardViewModel(this, readerName, bookService);
+            viewModel.SetReaderName(readerName);
+            DataContext = viewModel;
         }
     }
 }

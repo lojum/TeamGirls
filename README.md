@@ -23,6 +23,19 @@ SmartLib — це настільний застосунок для автома�
 - Бекенд: C#, .NET, LINQ
 - Інтерфейс: Desktop UI 
 
+## Архітектура
+
+Застосунок побудований як чотиришарова N-Tier система. Напрямок залежностей:
+
+`Presentation -> BusinessLogic -> DataAccess -> Domain`
+
+- **Domain** містить сутності та переліки предметної області й не залежить від інших проєктів.
+- **DataAccess** містить `SmartLibDbContext`, налаштування Entity Framework Core та доступ до PostgreSQL; залежить від `Domain`.
+- **BusinessLogic** містить сервіси та правила роботи з даними; використовує `DataAccess` і `Domain`. Реєстрація сервісів та налаштування підключення зосереджені в `AddBusinessLogic`.
+- **Presentation** містить WPF Views і MVVM ViewModels. ViewModels викликають сервіси бізнес-логіки, не звертаючись до `DbContext` чи Entity Framework Core. Вікна та сервіси створюються через Dependency Injection.
+
+Отже, проєкт `Presentation` посилається лише на `BusinessLogic`, а не напряму на `DataAccess` чи `Domain`.
+
 ## Склад команди та відповідальність
 
 Софія Шелеп — Data & Architecture

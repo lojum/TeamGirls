@@ -5,11 +5,10 @@ namespace Presentation.Views
 {
     public partial class AdminDashboardWindow : Window
     {
-        public AdminDashboardWindow(string currentAdminName)
+        public AdminDashboardWindow(string currentAdminName, AdminDashboardViewModel viewModel)
         {
             InitializeComponent();
-            
-            var viewModel = new AdminDashboardViewModel(this, currentAdminName);
+            viewModel.SetAdminName(currentAdminName);
             DataContext = viewModel;
             Loaded += async (_, _) =>
             {

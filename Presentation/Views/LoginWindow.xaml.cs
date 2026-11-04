@@ -5,10 +5,10 @@ namespace Presentation.Views
 {
     public partial class LoginWindow : Window
     {
-        public LoginWindow()
+        public LoginWindow(LoginViewModel viewModel)
         {
             InitializeComponent();
-            DataContext = new LoginViewModel(this);
+            DataContext = viewModel;
         }
 
         private void PasswordInput_PasswordChanged(object sender, RoutedEventArgs e)
