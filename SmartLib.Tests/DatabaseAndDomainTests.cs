@@ -2,152 +2,103 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using Xunit;
+using SmartLib.Tests.TestData;
 
 namespace SmartLib.Tests
 {
-    public class ExtendedSmartLibTests
+    public class ComprehensiveDomainTests
     {
         [Theory]
-        [MemberData(nameof(TestData.PhoneNumberTestData), MemberType = typeof(TestData))]
-        public void User_PhoneNumberValidation_UkrainianFormat(string phone, bool expectedIsValid)
+        [MemberData(nameof(ComprehensiveTestData.IsbnTestData), MemberType = typeof(ComprehensiveTestData))]
+        public void Book_IsbnFormatValidation_ReturnsExpected(string isbn, bool expectedValid)
         {
-            string cleanPhone = System.Text.RegularExpressions.Regex.Replace(phone, @"[^\d]", "");
-            bool isValid = cleanPhone.Length == 10 || (cleanPhone.Length == 12 && cleanPhone.StartsWith("38"));
+            var cleanIsbn = isbn.Replace("-", "").Trim();
+            bool isValid = (cleanIsbn.Length == 13 || cleanIsbn.Length == 10) && cleanIsbn.All(char.IsDigit);
 
-            Assert.Equal(expectedIsValid, isValid);
+            Assert.Equal(expectedValid, isValid);
         }
 
         [Theory]
-        [MemberData(nameof(TestData.FineCalculationTestData), MemberType = typeof(TestData))]
-        public void FineCalculation_OverdueDays_ReturnsCorrectAmount(int overdueDays, decimal dailyRate, decimal expectedFine)
+        [MemberData(nameof(ComprehensiveTestData.FineCalculationTestData), MemberType = typeof(ComprehensiveTestData))]
+        public void FineCalculation_StandardAndZeroDays_CalculatesCorrectly(int daysLate, decimal ratePerDay, decimal expectedTotal)
         {
-            decimal totalFine = overdueDays * dailyRate;
+            decimal actualTotal = daysLate * ratePerDay;
 
-            Assert.Equal(expectedFine, totalFine);
+            Assert.Equal(expectedTotal, actualTotal);
         }
 
         [Fact]
-        public void Reader_MaxBooksLimit_ExceedingLimitShouldBeBlocked()
+        public void Reader_AccountStatus_SuspendedUserCannotBorrowBooks()
         {
-            int currentBooksCount = 5;
-            int maxAllowedBooks = 5;
+            bool isActive = false;
+            bool hasActiveSubscription = true;
 
-            bool canBorrowMore = currentBooksCount < maxAllowedBooks;
+            bool canBorrow = isActive && hasActiveSubscription;
 
-            Assert.False(canBorrowMore, "Читач досяг ліміту книг і не може взяти нову.");
+            Assert.False(canBorrow, "Заблокований користувач не має права оформлювати нові позики.");
+        }
+
+        [Fact]
+        public void Reservation_ExpirationLogic_ChecksIfReservationExpired()
+        {
+            var reservationDate = new DateTime(2026, 10, 20);
+            var currentDate = new DateTime(2026, 10, 25);
+            int expirationDays = 3;
+
+            bool isExpired = (currentDate - reservationDate).TotalDays > expirationDays;
+
+            Assert.True(isExpired, "Термін резервування книги повинен вважатися минулим.");
         }
 
         [Theory]
-        [MemberData(nameof(TestData.BarcodeTestData), MemberType = typeof(TestData))]
-        public void Copy_BarcodeValidation_Test(string barcode, bool expectedIsValid)
+        [MemberData(nameof(ComprehensiveTestData.AuthorNameTestData), MemberType = typeof(ComprehensiveTestData))]
+        public void Author_FullNameFormatting_ProducesCorrectInitials(string firstName, string lastName, string expectedFormat)
         {
-            bool isValid = System.Text.RegularExpressions.Regex.IsMatch(barcode, @"^\d{13}$");
-
-            Assert.Equal(expectedIsValid, isValid);
-        }
-
-        [Fact]
-        public void BookReservation_StatusAvailable_CanBeReserved()
-        {
-            string copyStatus = "available";
-            bool isReserved = false;
-
-            bool canReserve = copyStatus == "available" && !isReserved;
-
-            Assert.True(canReserve, "Доступну та не заброньовану книгу можна забронювати.");
-        }
-
-        [Fact]
-        public void Membership_ExpirationDate_CheckIfExpired()
-        {
-            DateTime expiryDate = new DateTime(2025, 1, 1);
-            DateTime currentDate = new DateTime(2026, 10, 29);
-
-            bool isExpired = currentDate > expiryDate;
-
-            Assert.True(isExpired, "Термін дії читацького квитка минув.");
-        }
-
-        [Fact]
-        public void Catalog_FilterByGenre_ReturnsMatchingBooks()
-        {
-            var books = new List<(string Title, string Genre)>
-            {
-                ("1984", "Dystopia"),
-                ("Dune", "Sci-Fi"),
-                ("Brave New World", "Dystopia")
-            };
-
-            var dystopiaBooks = books.Where(b => b.Genre == "Dystopia").ToList();
-
-            Assert.Equal(2, dystopiaBooks.Count);
-            Assert.All(dystopiaBooks, b => Assert.Equal("Dystopia", b.Genre));
-        }
-
-        [Theory]
-        [MemberData(nameof(TestData.PermissionsTestData), MemberType = typeof(TestData))]
-        public void Permissions_CanManageCatalog_Test(string role, bool expectedResult)
-        {
-            bool hasAccess = role == "Admin" || role == "Librarian";
-
-            Assert.Equal(expectedResult, hasAccess);
-        }
-
-        [Fact]
-        public void Author_NameFormatting_ReturnsCorrectInitials()
-        {
-            string firstName = "Taras";
-            string lastName = "Shevchenko";
-
             string formatted = $"{lastName} {firstName[0]}.";
 
-            Assert.Equal("Shevchenko T.", formatted);
+            Assert.Equal(expectedFormat, formatted);
+        }
+
+        [Fact]
+        public void Catalog_SearchByMultipleFilters_AppliesSuccessfully()
+        {
+            var books = new List<(string Title, string Genre, short Year)>
+            {
+                ("Кобзар", "Поезія", 1840),
+                ("Тіні забутих предків", "Повість", 1912),
+                ("Захар Беркут", "Історична повість", 1883),
+                ("Камінний хрест", "Новела", 1900)
+            };
+
+            var filtered = books.Where(b => b.Year < 1900 && b.Genre.Contains("повість", StringComparison.OrdinalIgnoreCase)).ToList();
+
+            Assert.Single(filtered);
+            Assert.Equal("Захар Беркут", filtered[0].Title);
         }
 
         [Theory]
-        [MemberData(nameof(TestData.PageCountTestData), MemberType = typeof(TestData))]
-        public void Book_PageCountValidation_Test(int pages, bool expectedIsValid)
+        [MemberData(nameof(ComprehensiveTestData.BookCopyStockTestData), MemberType = typeof(ComprehensiveTestData))]
+        public void BookCopy_InventoryCheck_QuantityMustBePositive(int stockCount, bool expectedAvailable)
         {
-            bool isValid = pages > 0;
+            bool isAvailable = stockCount > 0;
 
-            Assert.Equal(expectedIsValid, isValid);
+            Assert.Equal(expectedAvailable, isAvailable);
         }
 
         [Fact]
-        public void Loan_ExtendDueDate_AddsStandardPeriod()
+        public void Password_ComplexityValidation_EnforcesSecurityRules()
         {
-            DateTime initialDueDate = new DateTime(2026, 11, 10);
-            int extensionDays = 14;
+            string password = "SecurePassword123!";
 
-            DateTime newDueDate = initialDueDate.AddDays(extensionDays);
+            bool hasMinLength = password.Length >= 8;
+            bool hasUpper = password.Any(char.IsUpper);
+            bool hasLower = password.Any(char.IsLower);
+            bool hasDigit = password.Any(char.IsDigit);
+            bool hasSymbol = password.Any(ch => !char.IsLetterOrDigit(ch));
 
-            Assert.Equal(new DateTime(2026, 11, 24), newDueDate);
-        }
+            bool isStrong = hasMinLength && hasUpper && hasLower && hasDigit && hasSymbol;
 
-        [Fact]
-        public void Catalog_SortByYear_AscendingOrder()
-        {
-            var books = new List<(string Title, short Year)>
-            {
-                ("Book C", 2020),
-                ("Book A", 1995),
-                ("Book B", 2015)
-            };
-
-            var sortedBooks = books.OrderBy(b => b.Year).ToList();
-
-            Assert.Equal("Book A", sortedBooks[0].Title);
-            Assert.Equal("Book B", sortedBooks[1].Title);
-            Assert.Equal("Book C", sortedBooks[2].Title);
-        }
-
-        [Fact]
-        public void Reader_DebtStatus_HasUnpaidFines_ReturnsTrue()
-        {
-            decimal totalFines = 45.50m;
-            bool hasDebt = totalFines > 0m;
-
-            Assert.True(hasDebt, "Читач має неоплачені штрафи.");
+            Assert.True(isStrong, "Пароль повинен відповідати стандартам безпеки.");
         }
     }
 }

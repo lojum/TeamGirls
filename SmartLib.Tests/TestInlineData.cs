@@ -1,45 +1,39 @@
-using Xunit;
 using System.Collections.Generic;
 
-namespace SmartLib.Tests
+namespace SmartLib.Tests.TestData
 {
-    public static class TestData
+    public static class ComprehensiveTestData
     {
-        public static IEnumerable<object[]> PhoneNumberTestData => new List<object[]>
+        public static IEnumerable<object[]> IsbnTestData => new List<object[]>
         {
-            new object[] { "+380982330102", true },
-            new object[] { "0982330102", true },
-            new object[] { "380982330102", true },
-            new object[] { "12345", false },
-            new object[] { "abcdefghij", false }
+            new object[] { "978-966-00-0000-1", true },
+            new object[] { "9789660000001", true },
+            new object[] { "978-3-16-148410-0", true },
+            new object[] { "123456789", false },
+            new object[] { "978-966-00-0000-X", false },
+            new object[] { "", false }
         };
 
         public static IEnumerable<object[]> FineCalculationTestData => new List<object[]>
         {
-            new object[] { 0, 5.0m, 0.0m },
-            new object[] { 3, 5.0m, 15.0m },
-            new object[] { 10, 2.5m, 25.0m }
+            new object[] { 1, 10.0m, 10.0m },
+            new object[] { 5, 12.5m, 62.5m },
+            new object[] { 0, 15.0m, 0.0m }
         };
 
-        public static IEnumerable<object[]> BarcodeTestData => new List<object[]>
+        public static IEnumerable<object[]> AuthorNameTestData => new List<object[]>
         {
-            new object[] { "4820000123456", true },
-            new object[] { "12345", false },
-            new object[] { "482000012345A", false }
+            new object[] { "Іван", "Франко", "Франко І." },
+            new object[] { "Леся", "Українка", "Українка Л." },
+            new object[] { "John", "Doe", "Doe J." }
         };
 
-        public static IEnumerable<object[]> PermissionsTestData => new List<object[]>
+        public static IEnumerable<object[]> BookCopyStockTestData => new List<object[]>
         {
-            new object[] { "Admin", true },
-            new object[] { "Librarian", true },
-            new object[] { "Reader", false }
-        };
-
-        public static IEnumerable<object[]> PageCountTestData => new List<object[]>
-        {
-            new object[] { 150, true },
             new object[] { 0, false },
-            new object[] { -50, false }
+            new object[] { 1, true },
+            new object[] { 100, true },
+            new object[] { -5, false }
         };
     }
 }
