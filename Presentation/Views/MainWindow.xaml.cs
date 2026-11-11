@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using Presentation.ViewModels;
 
-namespace Presentation.Views 
+namespace Presentation.Views
 {
     public partial class MainWindow : Window
     {

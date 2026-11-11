@@ -10,9 +10,9 @@ namespace SmartLib.IntegrationTests.TestData
         public const string LibrarianEmail = "o.mandzyuvata@smartlib.ua";
         public const string OverdueReaderName = "Іван Ковальчук";
 
-        public const string AvailableInventory = "INV-00101";   
-        public const string LoanedInventory = "INV-00201";      
-        public const string OverdueInventory = "INV-00301";     
+        public const string AvailableInventory = "INV-00101";
+        public const string LoanedInventory = "INV-00201";
+        public const string OverdueInventory = "INV-00301";
         public const string WrittenOffInventory = "INV-00501";
 
         public const string AvailableBookTitle = "Кобзар";

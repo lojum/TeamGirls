@@ -28,7 +28,7 @@ namespace SmartLib.IntegrationTests.Infrastructure
                 _dataSource = DependencyInjection.CreateDataSource(ConnectionString);
             }
             catch
-            { 
+            {
                 await DropAsync();
                 throw;
             }

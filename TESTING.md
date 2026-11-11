@@ -40,7 +40,7 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 ```
 
 У Visual Studio Code (розширення C# Dev Kit): вкладка Testing (іконка колби) → Run Tests.
-Тести також запускаються автоматично на кожен pull request (`.github/workflows/tests.yml`).
+Тести також запускаються автоматично на кожен pull request (`.github/workflows/ci.yml`, опис — у `CI.md`).
 
 ## 3. Автоматизовані тести (106)
 
@@ -166,7 +166,7 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
    dotnet test SmartLib.IntegrationTests/SmartLib.IntegrationTests.csproj
    ```
 
-Якщо немає ні Docker, ні змінної, тести падають із поясненням, що робити. У CI вони запускаються окремим завданням `integration-tests` на `ubuntu-latest` з PostgreSQL 16.
+Якщо немає ні Docker, ні змінної, тести падають із поясненням, що робити. У CI вони запускаються окремим завданням «Integration tests (PostgreSQL)» на `ubuntu-latest` з PostgreSQL 16.
 
 **Помилка, яку знайшли інтеграційні тести:** у `schema.sql` у гілці `main` лишилися маркери конфлікту злиття (`<<<<<<<`, `>>>>>>>`) і дубльований блок тестових даних. Модульні тести цього не помітили, а всі 30 інтеграційних тестів упали з `syntax error at or near "<<<<<<<"`. Після виправлення скрипта всі тести зелені.
 

@@ -1,0 +1,18 @@
+# Dependabot щотижня відкриває PR з оновленнями пакетів NuGet і версій GitHub Actions.
+# Кожен такий PR проходить той самий CI, тож оновлення, що ламає збирання чи тести, не потрапить у main.
+version: 2
+updates:
+  - package-ecosystem: "nuget"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    open-pull-requests-limit: 5
+    ignore:
+      # Мажорні версії (наприклад, EF Core 9/10) потребують .NET 9+, оновлюємо їх вручну
+      - dependency-name: "*"
+        update-types: [ "version-update:semver-major" ]
+
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

@@ -20,10 +20,10 @@ namespace SmartLib.IntegrationTests.TestData
 
         public static TheoryData<string> InvalidIsbns => new()
         {
-            "12345",             
-            "978-966-03-ABCD",      
-            "97896603800111",       
-            "X804429570"            
+            "12345",
+            "978-966-03-ABCD",
+            "97896603800111",
+            "X804429570"
         };
 
         public static TheoryData<short> BoundaryYears => new()

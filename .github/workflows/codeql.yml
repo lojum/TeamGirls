@@ -1,0 +1,32 @@
+name: CodeQL
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+  schedule:
+    # Щопонеділка: нові правила безпеки перевіряються й на коді, який не змінювався
+    - cron: '27 4 * * 1'
+
+permissions:
+  contents: read
+  security-events: write
+  actions: read
+
+jobs:
+  analyze:
+    name: Security analysis (C#)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      # build-mode: none аналізує C# без збирання, тож WPF-проєкт не заважає Linux-раннеру
+      - uses: github/codeql-action/init@v4
+        with:
+          languages: csharp
+          build-mode: none
+
+      - uses: github/codeql-action/analyze@v4
+        with:
+          category: "/language:csharp"
