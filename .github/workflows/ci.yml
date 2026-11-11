@@ -112,7 +112,7 @@ jobs:
           dotnet-version: 8.0.x
 
       - name: Download test results
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@v8
         with:
           pattern: '*-test-results'
           path: results
