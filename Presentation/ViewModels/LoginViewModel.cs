@@ -91,11 +91,11 @@ namespace Presentation.ViewModels
                 }
                 else if (user.Role == UserRole.Reader)
                 {
-                    _navigationService.ShowReaderDashboard(user.FullName);
+                    _navigationService.ShowReaderDashboard(user.FullName, user.UserId);
                 }
                 else if (user.Role == UserRole.Librarian)
                 {
-                    _navigationService.ShowLibrarianDashboard(user.FullName);
+                    _navigationService.ShowLibrarianDashboard(user.FullName, user.UserId);
                 }
                 else
                 {

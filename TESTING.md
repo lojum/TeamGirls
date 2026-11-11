@@ -42,14 +42,18 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 У Visual Studio Code (розширення C# Dev Kit): вкладка Testing (іконка колби) → Run Tests.
 Тести також запускаються автоматично на кожен pull request (`.github/workflows/tests.yml`).
 
-## 3. Автоматизовані тести (70)
+## 3. Автоматизовані тести (106)
 
 | Клас | Що перевіряє |
 |---|---|
 | `PasswordHasherTests` | правильний і неправильний пароль; різні хеші одного пароля (сіль); формат хешу; підтримка BCrypt; 9 варіантів зіпсованого хешу повертають `false` без винятку |
 | `AuthServiceTests` | успішний вхід; email в іншому регістрі та з пробілами; неправильний пароль; невідомий email; неактивний користувач; порожні поля |
 | `BookServiceTests` | пошук за назвою, автором, жанром, точним роком; частина року не збігається; без урахування регістру і зайвих пробілів; частина слова; порожній запит повертає всі книги; немає збігів; спецсимволи та SQL-ін'єкція; книга без авторів і жанрів |
-| `LoanServiceTests` | успішна видача і термін повернення +14 днів; подія `BookLoaned`; невідомий читач; email бібліотекаря; неактивний читач; невідомий примірник; статуси `OnLoan`, `Reserved`, `WrittenOff`; повторна видача того самого примірника; подія не спрацьовує при помилці; порожні поля |
+| `LoanServiceTests` | успішна видача і термін повернення +14 днів; нестандартний термін (7, 21, 30 днів) і неприпустимий (0, −1, 61); подія `BookLoaned`; невідомий читач; email бібліотекаря; неактивний читач; невідомий примірник; статуси `OnLoan`, `Reserved`, `WrittenOff`; повторна видача того самого примірника; подія не спрацьовує при помилці; порожні поля; активні видачі читача без повернених і чужих |
+| `LibrarianDashboardServiceTests` | статус і термін повернення виданого примірника; повернена видача не позначає примірник виданим; лише активні читачі; історія від найновішої дії; фільтр таблиці за назвою, автором, ISBN, інвентарним номером і статусом |
+| `LibrarianDashboardViewModelTests` | завантаження таблиці й списків; помилка бази; пошук у таблиці; видача передає інвентарний номер, email, id бібліотекаря і термін; повідомлення з `LoanException`; видача без вибору читача й книги; дата повернення за обраним терміном |
+| `ReaderBookStatusTests` | статус книги в кабінеті читача: видана цьому читачеві, є вільні примірники, немає вільних |
+| `RegistrationViewModelTests` (Оксана) | валідація форми реєстрації; кнопка реєстрації стає активною |
 | `DbContextMappingTests` | колонки `book_authors` і `book_genres`; колонки представлення `v_book_catalog`; тип `date` для `due_date`, `acquired_at`, `written_off_at`; назви таблиць; колонки `loans` |
 
 ### 3.1. Тестові дані
@@ -63,6 +67,8 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 | `TestData/BookTestData.cs` | тестовий каталог із 4 книг, запити для перевірки регістру, порожні запити, запити без збігів (зокрема SQL-ін'єкція) | `BookServiceTests` |
 | `TestData/LoanTestData.cs` | інвентарні номери, тестова книга, фіксована дата і очікуваний термін повернення, фрагменти повідомлень про помилки, недоступні статуси примірника, порожні вхідні дані | `LoanServiceTests` |
 | `TestData/SchemaTestData.cs` | назви таблиць і колонок зі `schema.sql` | `DbContextMappingTests` |
+| `TestData/LibrarianTestData.cs` | бібліотекар, другий і неактивний читач, інвентарні номери, дати видачі й повернення, примірники й читачі для панелі, пошукові запити й статуси | `LibrarianDashboardServiceTests`, `LibrarianDashboardViewModelTests`, `ReaderBookStatusTests` |
+| `RegistrationTestData.cs` (Оксана) | коректні й некоректні дані форми реєстрації | `RegistrationViewModelTests` |
 
 Приклад:
 
@@ -82,6 +88,8 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
 ```
 
 Допоміжний клас `Helpers/TestDb.cs` лишився окремо: він не зберігає дані, а створює тестову базу й додає в неї записи.
+
+Замінники сервісів для тестів ViewModel лежать у `Helpers/Fakes.cs`: `FakeLoanService` (fake: запам'ятовує виклик видачі, піднімає подію `BookLoaned` або кидає заданий виняток), `FakeLibrarianDashboardService` (stub: повертає підготовлені примірники й читачів) і `FakeNavigationService`.
 
 ## 4. Перевірка крайових ситуацій
 
@@ -103,6 +111,10 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
 - [ ] Пошук у каталозі, читачах і боржниках фільтрує списки.
 - [ ] Кнопки «Previous» і «Next» у боржників неактивні на першій та останній сторінках.
 - [ ] Без інтернету: замість падіння з'являється повідомлення про помилку бази.
+- [ ] Вхід бібліотекаря: таблиця показує примірники з бази, статус «Checked Out» і дату повернення для виданих.
+- [ ] Видача: обрати читача, доступний примірник і термін 21 день → «Confirm Loan» (або F5) → повідомлення «… issued to …», примірник стає «Checked Out», у «Recent System Activity» з'являється запис ISSUED.
+- [ ] Видача списаного або вже виданого примірника (вибір у таблиці) → червоне повідомлення з причиною.
+- [ ] Вхід читача: каталог з бази, категорії — жанри; книга, яку видали цьому читачеві, у розділі «My Loans» зі статусом «Borrowed · due …».
 
 ## 6. Виконаний рефакторинг
 
@@ -116,6 +128,7 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
 | Фільтр пошуку був усередині `SearchBooksAsync` і читав представлення бази, тож без бази його не можна було перевірити | Фільтр винесено в `BookService.ApplySearch(IQueryable<BookCatalogView>, query)`; додано обрізання пробілів у запиті | `BookServiceTests` (16 тестів) |
 | `BookCatalogView.ISBN` і `Publisher` були непорожніми рядками, хоча в базі ці колонки можуть бути `NULL`: книга без ISBN зламала б завантаження каталогу | Тип змінено на `string?` | `BookServiceTests.Search_BookWithoutAuthorsAndGenres_IsFoundByTitle`, `DbContextMappingTests.BookCatalogView_MapsToViewColumns` |
 | Тестові дані (email, паролі, хеші, каталог книг, назви колонок) повторювались у різних тестах і займали довгі списки `[InlineData]` | Дані винесено в `SmartLib.Tests/TestData` і передаються через `[MemberData]`; додано коментарі Arrange — Act — Assert і категорії `[Trait]` | усі 70 тестів зелені після перенесення |
+| Після злиття гілок вікна бібліотекаря й читача показували зашиті приклади даних: видача книги і каталог не працювали з базою, `UserId` бібліотекаря губився під час навігації | Новий `LibrarianDashboardService` (примірники, читачі, історія); `LibrarianDashboardViewModel` видає книгу через `LoanService` з обраним терміном і показує повідомлення з `LoanException`; кабінет читача бере каталог через `BookService`, а «My Loans» — через `LoanService.GetActiveLoansAsync`; навігація передає `UserId` | `LibrarianDashboardServiceTests`, `LibrarianDashboardViewModelTests`, `ReaderBookStatusTests`, нові тести `LoanServiceTests` |
 | Тестовий проєкт не мав інструментів для бази й покриття | Додано `coverlet.collector`, EF InMemory і глобальний `using Xunit` | запуск у GitHub Actions |
 
 ## 7. Що лишається

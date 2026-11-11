@@ -4,6 +4,8 @@ using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
+using BusinessLogic.Services;
+using Domain.Entities;
 using Presentation.Commands;
 using Presentation.Services;
 
@@ -11,11 +13,18 @@ namespace Presentation.ViewModels
 {
     public class ReaderDashboardViewModel : INotifyPropertyChanged
     {
+        private const string AllBooks = "All Books";
+
+        private readonly IBookService _bookService;
+        private readonly ILoanService _loanService;
         private readonly IWindowNavigationService _navigationService;
-        private readonly List<BookCardViewModel> _books = CreateSampleBooks();
+        private readonly List<BookCatalogView> _catalog = new();
+        private readonly List<BookCardViewModel> _books = new();
         private string _readerName = string.Empty;
+        private long _readerId;
+        private bool _isLoaded;
         private string _searchText = string.Empty;
-        private string _selectedCategory = "All Books";
+        private string _selectedCategory = AllBooks;
         private string _selectedSection = "Book Search";
         private string _selectedSort = "Relevance";
 
@@ -108,19 +117,11 @@ namespace Presentation.ViewModels
         public bool IsBookSearch => SelectedSection != "My Account";
         public bool IsAccount => SelectedSection == "My Account";
         public bool ShowCategories => SelectedSection == "Book Search";
-        public bool ShowNoBooksMessage => IsBookSearch && VisibleBooks.Count == 0;
+        public bool ShowNoBooksMessage => _isLoaded && IsBookSearch && VisibleBooks.Count == 0;
         public string ResultSummary { get; private set; } = string.Empty;
 
-        public ObservableCollection<CategoryOptionViewModel> Categories { get; } = new(
-        [
-            new("All Books", true),
-            new("Fiction"),
-            new("Non-Fiction"),
-            new("Science"),
-            new("History"),
-            new("Biography"),
-            new("Art")
-        ]);
+        // Категорії будуються з жанрів, які є в каталозі
+        public ObservableCollection<CategoryOptionViewModel> Categories { get; } = new([new(AllBooks, true)]);
 
         public ObservableCollection<BookCardViewModel> VisibleBooks { get; } = new();
 
@@ -130,8 +131,13 @@ namespace Presentation.ViewModels
         public ICommand SelectCategoryCommand { get; }
         public ICommand ClearSearchCommand { get; }
 
-        public ReaderDashboardViewModel(IWindowNavigationService navigationService)
+        public ReaderDashboardViewModel(
+            IBookService bookService,
+            ILoanService loanService,
+            IWindowNavigationService navigationService)
         {
+            _bookService = bookService;
+            _loanService = loanService;
             _navigationService = navigationService;
             LogOutCommand = new RelayCommand(_ => _navigationService.ShowMain());
             SearchCommand = new RelayCommand(_ => RefreshBooks());
@@ -142,7 +148,7 @@ namespace Presentation.ViewModels
                     SelectedSection = value;
                     if (value != "Book Search")
                     {
-                        SelectedCategory = "All Books";
+                        SelectedCategory = AllBooks;
                     }
                 }
             });
@@ -154,22 +160,61 @@ namespace Presentation.ViewModels
                 }
             });
             ClearSearchCommand = new RelayCommand(_ => SearchText = string.Empty);
-            foreach (var book in _books)
-            {
-                book.FavoriteChanged += (_, _) => RefreshBooks();
-            }
-
-            RefreshBooks();
+            ResultSummary = "Loading catalog...";
         }
 
-        public void SetReaderName(string readerName)
+        public void SetReader(string readerName, long readerId)
         {
             ReaderName = readerName;
+            _readerId = readerId;
+        }
+
+        public async Task LoadAsync()
+        {
+            try
+            {
+                var catalog = await _bookService.SearchBooksAsync(string.Empty);
+                var loans = await _loanService.GetActiveLoansAsync(_readerId);
+                var dueByBook = loans
+                    .GroupBy(loan => loan.BookId)
+                    .ToDictionary(group => group.Key, group => group.Min(loan => loan.DueDate));
+
+                _catalog.Clear();
+                _catalog.AddRange(catalog);
+                _books.Clear();
+                var sortOrder = 0;
+                foreach (var book in catalog.OrderBy(book => book.Title))
+                {
+                    var card = BookCardViewModel.From(book, ++sortOrder,
+                        dueByBook.TryGetValue(book.BookId, out var dueDate) ? dueDate : null);
+                    card.FavoriteChanged += (_, _) => RefreshBooks();
+                    _books.Add(card);
+                }
+
+                Categories.Clear();
+                Categories.Add(new CategoryOptionViewModel(AllBooks, SelectedCategory == AllBooks));
+                foreach (var genre in _books.SelectMany(book => book.Genres).Distinct().Order())
+                {
+                    Categories.Add(new CategoryOptionViewModel(genre, SelectedCategory == genre));
+                }
+
+                _isLoaded = true;
+                RefreshBooks();
+            }
+            catch (Exception)
+            {
+                ResultSummary = "Could not load the catalog from the database. Try again later.";
+                OnPropertyChanged(nameof(ResultSummary));
+            }
         }
 
         private void RefreshBooks()
         {
-            IEnumerable<BookCardViewModel> filtered = _books;
+            // Пошук використовує ту саму логіку, що й BookService (назва, автор, жанр, рік)
+            var matchingIds = BookService.ApplySearch(_catalog.AsQueryable(), SearchText)
+                .Select(book => book.BookId)
+                .ToHashSet();
+            IEnumerable<BookCardViewModel> filtered = _books.Where(book => matchingIds.Contains(book.BookId));
 
             if (SelectedSection == "Favorites")
             {
@@ -179,16 +224,9 @@ namespace Presentation.ViewModels
             {
                 filtered = filtered.Where(book => book.IsBorrowed);
             }
-            else if (SelectedSection == "Book Search" && SelectedCategory != "All Books")
+            else if (SelectedSection == "Book Search" && SelectedCategory != AllBooks)
             {
-                filtered = filtered.Where(book => book.Category == SelectedCategory);
-            }
-
-            if (!string.IsNullOrWhiteSpace(SearchText))
-            {
-                filtered = filtered.Where(book =>
-                    book.Title.Contains(SearchText, StringComparison.OrdinalIgnoreCase)
-                    || book.Author.Contains(SearchText, StringComparison.OrdinalIgnoreCase));
+                filtered = filtered.Where(book => book.Genres.Contains(SelectedCategory));
             }
 
             filtered = SelectedSort switch
@@ -214,20 +252,6 @@ namespace Presentation.ViewModels
             };
             OnPropertyChanged(nameof(ResultSummary));
         }
-
-        private static List<BookCardViewModel> CreateSampleBooks() =>
-        [
-            new(1, "The Gilded Mist", "Dr. Alistair Gray", "Science", "Available", "#153B37", "#D7B978", true),
-            new(2, "Structural Futures", "Mira Solis", "Science", "Available", "#193B58", "#D4E1E9", false),
-            new(3, "The Lost Cities", "Eleanor West", "History", "Available", "#765C3D", "#F0D8A5", true),
-            new(4, "Ocean's Edge", "Eliza Reed", "Biography", "Borrowed", "#17636A", "#F1D58B", false),
-            new(5, "Mapping the Stars", "Dr. Alistair Gray", "Science", "Available", "#122A44", "#DFC68B", true),
-            new(6, "Echoes of the Revolution", "Hana Mercier", "History", "Borrowed", "#523A36", "#F0D8CB", false),
-            new(7, "The Art of Slow Living", "Clara Finch", "Non-Fiction", "Available", "#C9B89A", "#554536", true),
-            new(8, "Beyond the Horizon", "Robert Vance", "Biography", "Available", "#592E58", "#FFD7A1", false),
-            new(9, "The Red Nights", "Elif Shafak", "Fiction", "Available", "#743D3A", "#F3D0C2", true),
-            new(10, "A Room of Blue", "Mara Ellis", "Art", "Available", "#2B536F", "#E0C89A", false)
-        ];
 
         private bool SetProperty<T>(ref T field, T value, [CallerMemberName] string? propertyName = null)
         {
@@ -276,14 +300,36 @@ namespace Presentation.ViewModels
 
     public sealed class BookCardViewModel : INotifyPropertyChanged
     {
+        // Палітра обкладинок: колір обирається за BookId, тож у книги він завжди однаковий
+        private static readonly (string Cover, string Accent)[] CoverPalette =
+        [
+            ("#153B37", "#D7B978"),
+            ("#193B58", "#D4E1E9"),
+            ("#765C3D", "#F0D8A5"),
+            ("#17636A", "#F1D58B"),
+            ("#122A44", "#DFC68B"),
+            ("#523A36", "#F0D8CB"),
+            ("#C9B89A", "#554536"),
+            ("#592E58", "#FFD7A1"),
+            ("#743D3A", "#F3D0C2"),
+            ("#2B536F", "#E0C89A")
+        ];
+
         private bool _isFavorite;
 
+        public long BookId { get; }
         public int SortOrder { get; }
         public string Title { get; }
         public string Author { get; }
-        public string Category { get; }
+        public IReadOnlyList<string> Genres { get; }
+        public string Category => Genres.Count > 0 ? Genres[0] : "Other";
         public string Status { get; }
-        public bool IsBorrowed => Status == "Borrowed";
+
+        // Книга, яку цей читач зараз тримає (розділ «My Loans»)
+        public bool IsBorrowed { get; }
+
+        // Сірий бейдж: книгу взяв цей читач або вільних примірників немає
+        public bool IsMuted { get; }
         public Brush CoverBrush { get; }
         public Brush AccentBrush { get; }
         public bool IsFavorite
@@ -305,24 +351,46 @@ namespace Presentation.ViewModels
         public event EventHandler? FavoriteChanged;
 
         public BookCardViewModel(
+            long bookId,
             int sortOrder,
             string title,
             string author,
-            string category,
+            IReadOnlyList<string> genres,
             string status,
-            string coverColor,
-            string accentColor,
-            bool isFavorite)
+            bool isBorrowed,
+            bool isMuted)
         {
+            BookId = bookId;
             SortOrder = sortOrder;
             Title = title;
-            Author = author;
-            Category = category;
+            Author = string.IsNullOrWhiteSpace(author) ? "Unknown author" : author;
+            Genres = genres;
             Status = status;
-            CoverBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(coverColor));
-            AccentBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(accentColor));
-            _isFavorite = isFavorite;
+            IsBorrowed = isBorrowed;
+            IsMuted = isMuted;
+            var (cover, accent) = CoverPalette[(int)(Math.Abs(bookId) % CoverPalette.Length)];
+            CoverBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(cover));
+            AccentBrush = new SolidColorBrush((Color)ColorConverter.ConvertFromString(accent));
             ToggleFavoriteCommand = new RelayCommand(_ => IsFavorite = !IsFavorite);
         }
+
+        public static BookCardViewModel From(BookCatalogView book, int sortOrder, DateTime? myDueDate)
+        {
+            var genres = book.Genres
+                .Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
+            var (status, isMuted) = ReaderBookStatus.Describe(book.AvailableCopies, myDueDate);
+            return new BookCardViewModel(
+                book.BookId, sortOrder, book.Title, book.Authors, genres, status, myDueDate is not null, isMuted);
+        }
+    }
+
+    public static class ReaderBookStatus
+    {
+        public static (string Text, bool IsMuted) Describe(long availableCopies, DateTime? myDueDate) =>
+            myDueDate is not null
+                ? ($"Borrowed · due {myDueDate:yyyy-MM-dd}", true)
+                : availableCopies > 0
+                    ? ($"Available ({availableCopies})", false)
+                    : ("Not available", true);
     }
 }

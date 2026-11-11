@@ -53,8 +53,8 @@ namespace SmartLib.Tests
             public void ShowLogin() { }
             public void ShowRegistration() { }
             public void ShowAdminDashboard(string adminName) { }
-            public void ShowLibrarianDashboard(string librarianName) { }
-            public void ShowReaderDashboard(string readerName) { }
+            public void ShowLibrarianDashboard(string librarianName, long librarianId) { }
+            public void ShowReaderDashboard(string readerName, long readerId) { }
         }
     }
 }
