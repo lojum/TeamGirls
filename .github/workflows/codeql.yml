@@ -19,7 +19,7 @@ jobs:
     name: Security analysis (C#)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       # build-mode: none аналізує C# без збирання, тож WPF-проєкт не заважає Linux-раннеру
       - uses: github/codeql-action/init@v4
