@@ -24,7 +24,7 @@ jobs:
     # Рішення містить WPF-проєкт Presentation, тому збирання на Windows
     runs-on: windows-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -78,7 +78,7 @@ jobs:
       # Тимчасова база лише для тестів, не робоча
       SMARTLIB_TEST_DB: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -105,7 +105,7 @@ jobs:
       MIN_BUSINESS_LOGIC_COVERAGE: 85
     steps:
       # Вихідний код потрібен, щоб HTML-звіт показував рядки коду
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v5
         with:
@@ -169,7 +169,7 @@ jobs:
     name: Code style (dotnet format)
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
 
       - uses: actions/setup-dotnet@v5
         with:
