@@ -179,5 +179,60 @@ namespace SmartLib.Tests.Services
             await Assert.ThrowsAsync<LoanException>(
                 () => service.IssueBookAsync(inventoryNumber, email, LibrarianId));
         }
+
+        [Theory]
+        [MemberData(nameof(CustomDurations), MemberType = typeof(LoanTestData))]
+        public async Task IssueBook_CustomDuration_SetsDueDate(int loanDays, DateTime expectedDueDate)
+        {
+            // Arrange
+            var (db, service, _) = Arrange();
+
+            // Act
+            await service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId, loanDays);
+
+            // Assert
+            Assert.Equal(expectedDueDate, (await db.Loans.SingleAsync()).DueDate);
+        }
+
+        [Theory]
+        [MemberData(nameof(InvalidDurations), MemberType = typeof(LoanTestData))]
+        public async Task IssueBook_InvalidDuration_Throws(int loanDays)
+        {
+            // Arrange
+            var (db, service, _) = Arrange();
+
+            // Act
+            var ex = await Assert.ThrowsAsync<LoanException>(
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId, loanDays));
+
+            // Assert
+            Assert.Contains(InvalidDurationMessage, ex.Message);
+            Assert.Empty(db.Loans);
+        }
+
+        [Fact]
+        public async Task GetActiveLoans_ReturnsOnlyReadersUnreturnedLoans()
+        {
+            // Arrange: видача читача, повернена видача та видача іншого читача
+            var (db, service, copy) = Arrange();
+            var reader = await db.Users.SingleAsync();
+            var other = TestDb.AddUser(db, LibrarianTestData.SecondReaderEmail);
+            var book = await db.Books.SingleAsync();
+            var returnedCopy = TestDb.AddCopy(db, book, LibrarianTestData.LoanedInventory);
+            var otherCopy = TestDb.AddCopy(db, book, LibrarianTestData.WrittenOffInventory);
+            TestDb.AddLoan(db, copy, reader, Now.UtcDateTime, ExpectedDueDate);
+            TestDb.AddLoan(db, returnedCopy, reader, Now.UtcDateTime, ExpectedDueDate, Now.UtcDateTime.AddDays(1));
+            TestDb.AddLoan(db, otherCopy, other, Now.UtcDateTime, ExpectedDueDate);
+
+            // Act
+            var loans = await service.GetActiveLoansAsync(reader.UserId);
+
+            // Assert
+            var loan = Assert.Single(loans);
+            Assert.Equal(InventoryNumber, loan.InventoryNumber);
+            Assert.Equal(BookTitle, loan.BookTitle);
+            Assert.Equal(book.BookId, loan.BookId);
+            Assert.Equal(ExpectedDueDate, loan.DueDate);
+        }
     }
 }

@@ -59,6 +59,22 @@ namespace SmartLib.Tests.Helpers
             db.SaveChanges();
             return copy;
         }
+
+        public static Loan AddLoan(SmartLibDbContext db, BookCopy copy, User reader, DateTime loanedAt,
+            DateTime dueDate, DateTime? returnedAt = null)
+        {
+            var loan = new Loan
+            {
+                CopyId = copy.CopyId,
+                ReaderId = reader.UserId,
+                LoanedAt = loanedAt,
+                DueDate = dueDate,
+                ReturnedAt = returnedAt
+            };
+            db.Loans.Add(loan);
+            db.SaveChanges();
+            return loan;
+        }
     }
 
     // Годинник із фіксованим часом для детермінованих тестів дат

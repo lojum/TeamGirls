@@ -74,6 +74,10 @@
         </Style>
     </Window.Resources>
 
+    <Window.InputBindings>
+        <KeyBinding Key="F5" Command="{Binding IssueBookCommand}"/>
+    </Window.InputBindings>
+
     <DockPanel LastChildFill="True">
         <Border DockPanel.Dock="Top" Background="#ECEDEF" BorderBrush="#C7C9CB" BorderThickness="0,0,0,1">
             <DockPanel Margin="10,0">
@@ -85,7 +89,8 @@
                     <TextBlock Text="  [Active Session]" Foreground="#6C7075" VerticalAlignment="Center"/>
                 </StackPanel>
                 <Button DockPanel.Dock="Right" Content="●" Width="22" Height="22" Margin="4,0"
-                        Background="Transparent" Foreground="#C73535" BorderThickness="0" ToolTip="Close"/>
+                        Background="Transparent" Foreground="#C73535" BorderThickness="0" ToolTip="Log out"
+                        Command="{Binding LogOutCommand}"/>
             </DockPanel>
         </Border>
 
@@ -93,7 +98,7 @@
             <MenuItem Header="_File">
                 <MenuItem Header="New Book"/>
                 <Separator/>
-                <MenuItem Header="Log Out"/>
+                <MenuItem Header="Log Out" Command="{Binding LogOutCommand}"/>
             </MenuItem>
             <MenuItem Header="_Edit"/>
             <MenuItem Header="_View"/>
@@ -113,11 +118,22 @@
                     <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="●" Foreground="#1F9D55" Margin="0,0,6,0"/>
+                    <TextBlock Text="●" Margin="0,0,6,0">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="#1F9D55"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsError}" Value="True">
+                                        <Setter Property="Foreground" Value="#BC3434"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                         <TextBlock Text="{Binding StatusMessage}" Foreground="#55595E"/>
                 </StackPanel>
                 <TextBlock Grid.Column="1" Text="{Binding LoggedInAs}" Foreground="#50545A" Margin="20,0"/>
-                <TextBlock Grid.Column="2" Text="UI mock-up" Foreground="#85898E"/>
+                <TextBlock Grid.Column="2" Text="Connected to SmartLib database" Foreground="#85898E"/>
             </Grid>
         </Border>
 
@@ -127,14 +143,14 @@
                     <Button Content="＋  New Book" Style="{StaticResource ToolbarButtonStyle}"/>
                     <Button Content="⇧  Import ISBN" Style="{StaticResource ToolbarButtonStyle}"/>
                     <Button Content="▣  Delete Selected" Style="{StaticResource ToolbarButtonStyle}"/>
-                    <Button Content="⟳  Refresh Grid" Style="{StaticResource ToolbarButtonStyle}"/>
+                    <Button Content="⟳  Refresh Grid" Style="{StaticResource ToolbarButtonStyle}" Command="{Binding RefreshCommand}"/>
                     <Button Content="⇩  Export to CSV" Style="{StaticResource ToolbarButtonStyle}"/>
                 </StackPanel>
                 <StackPanel Orientation="Horizontal" DockPanel.Dock="Right" VerticalAlignment="Center">
                     <TextBlock Text="Quick Search:" VerticalAlignment="Center" Margin="0,0,8,0"/>
                     <TextBox Width="220" Height="28" Padding="7,3" VerticalContentAlignment="Center"
                              Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
-                             ToolTip="Search by title, author or ISBN"/>
+                             ToolTip="Search by title, author, ISBN or inventory number"/>
                     <Button Content="⌕  Search" Margin="5,0,12,0"
                             Background="{StaticResource AccentBrush}" Foreground="White"
                             BorderThickness="0" Padding="12,0" Height="28" Cursor="Hand"/>
@@ -174,7 +190,7 @@
                       Background="White"
                       RowHeaderWidth="0">
                 <DataGrid.Columns>
-                    <DataGridTextColumn Header="Book ID" Binding="{Binding BookId}" Width="82"/>
+                    <DataGridTextColumn Header="Inventory No." Binding="{Binding BookId}" Width="95"/>
                     <DataGridTextColumn Header="Book Title" Binding="{Binding Title}" Width="2.1*"/>
                     <DataGridTextColumn Header="Author" Binding="{Binding Author}" Width="1.25*"/>
                     <DataGridTextColumn Header="ISBN" Binding="{Binding Isbn}" Width="1.35*"/>
@@ -199,27 +215,37 @@
                     <StackPanel>
                         <TextBlock Text="♙  Issue Book (New Loan Entry)" FontWeight="Bold" Foreground="#30343A" Margin="0,0,0,12"/>
 
-                        <TextBlock Text="1. Select Reader (Patron ID / Name)" FontWeight="SemiBold" Margin="0,0,0,5"/>
+                        <TextBlock Text="1. Select Reader (Name / Email)" FontWeight="SemiBold" Margin="0,0,0,5"/>
                         <ComboBox ItemsSource="{Binding Readers}" SelectedItem="{Binding SelectedReader}"
-                                  Height="30" Padding="5,4"/>
+                                  DisplayMemberPath="Display" Height="30" Padding="5,4"/>
 
-                        <TextBlock Text="2. Select Book (Inventory Title)" FontWeight="SemiBold" Margin="0,13,0,5"/>
-                        <ComboBox ItemsSource="{Binding Books}" SelectedItem="{Binding SelectedBook, Mode=TwoWay}"
-                                  DisplayMemberPath="Title" Height="30" Padding="5,4"/>
+                        <TextBlock Text="2. Select Book (available copies only)" FontWeight="SemiBold" Margin="0,13,0,5"/>
+                        <ComboBox ItemsSource="{Binding AvailableBooks}" SelectedItem="{Binding SelectedBook, Mode=TwoWay}"
+                                  Height="30" Padding="5,4">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <TextBlock>
+                                        <Run Text="{Binding BookId, Mode=OneWay}" FontWeight="SemiBold"/>
+                                        <Run Text="  "/>
+                                        <Run Text="{Binding Title, Mode=OneWay}"/>
+                                    </TextBlock>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
 
                         <TextBlock Text="3. Loan Duration" FontWeight="SemiBold" Margin="0,13,0,5"/>
                         <ComboBox ItemsSource="{Binding LoanDurations}" SelectedItem="{Binding SelectedDuration}"
-                                  Height="30" Padding="5,4"/>
+                                  DisplayMemberPath="Label" Height="30" Padding="5,4"/>
 
                         <TextBlock Text="4. Auto-Calculated Due Date" FontWeight="SemiBold" Margin="0,13,0,5"/>
-                        <TextBox Text="{Binding CalculatedDueDate}" IsReadOnly="True" Height="29" Padding="6,4"
+                        <TextBox Text="{Binding CalculatedDueDate, Mode=OneWay}" IsReadOnly="True" Height="29" Padding="6,4"
                                  Background="#F5F5F5" BorderBrush="#C8CACC"/>
 
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,14,0,0">
                             <Button Content="⟲  Reset Form" Height="32"
                                     Padding="10,0" Margin="0,0,7,0" Background="#F5F5F5"
-                                    BorderBrush="#C8CACC" Cursor="Hand"/>
-                            <Button Content="✓  Confirm Loan (F5)" Height="32"
+                                    BorderBrush="#C8CACC" Cursor="Hand" Command="{Binding ResetFormCommand}"/>
+                            <Button Content="✓  Confirm Loan (F5)" Height="32" Command="{Binding IssueBookCommand}"
                                     Padding="12,0" Background="{StaticResource AccentBrush}"
                                     Foreground="White" BorderThickness="0" FontWeight="SemiBold" Cursor="Hand"/>
                         </StackPanel>

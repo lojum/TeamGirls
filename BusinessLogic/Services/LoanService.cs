@@ -11,6 +11,7 @@ namespace BusinessLogic.Services
     {
         public string BookTitle { get; set; } = string.Empty;
         public string ReaderName { get; set; } = string.Empty;
+        public DateTime DueDate { get; set; }
     }
 
     public class LoanException : Exception
@@ -22,15 +23,20 @@ namespace BusinessLogic.Services
 
     public delegate void BookLoanedEventHandler(object sender, LoanEventArgs e);
 
+    // Активна видача читача для розділу «My Loans»
+    public sealed record ReaderLoanSummary(long BookId, string BookTitle, string InventoryNumber, DateTime DueDate);
+
     public interface ILoanService
     {
         event BookLoanedEventHandler BookLoaned;
-        Task<Loan> IssueBookAsync(string inventoryNumber, string readerEmail, long librarianId);
+        Task<Loan> IssueBookAsync(string inventoryNumber, string readerEmail, long librarianId, int loanDays = LoanService.LoanPeriodDays);
+        Task<IReadOnlyList<ReaderLoanSummary>> GetActiveLoansAsync(long readerId);
     }
 
     public class LoanService : ILoanService
     {
         public const int LoanPeriodDays = 14;
+        public const int MaxLoanDays = 60;
 
         private readonly SmartLibDbContext _context;
         private readonly TimeProvider _timeProvider;
@@ -43,8 +49,12 @@ namespace BusinessLogic.Services
             _timeProvider = timeProvider;
         }
 
-        public async Task<Loan> IssueBookAsync(string inventoryNumber, string readerEmail, long librarianId)
+        public async Task<Loan> IssueBookAsync(string inventoryNumber, string readerEmail, long librarianId,
+            int loanDays = LoanPeriodDays)
         {
+            if (loanDays < 1 || loanDays > MaxLoanDays)
+                throw new LoanException($"Loan duration must be between 1 and {MaxLoanDays} days.");
+
             if (string.IsNullOrWhiteSpace(inventoryNumber))
                 throw new LoanException("Enter the item's inventory number.");
 
@@ -81,7 +91,7 @@ namespace BusinessLogic.Services
                 ReaderId = reader.UserId,
                 LibrarianId = librarianId,
                 LoanedAt = now,
-                DueDate = now.Date.AddDays(LoanPeriodDays)
+                DueDate = now.Date.AddDays(loanDays)
             };
 
             _context.Loans.Add(loan);
@@ -91,10 +101,20 @@ namespace BusinessLogic.Services
             BookLoaned?.Invoke(this, new LoanEventArgs
             {
                 BookTitle = copy.Book.Title,
-                ReaderName = reader.FullName
+                ReaderName = reader.FullName,
+                DueDate = loan.DueDate
             });
 
             return loan;
+        }
+
+        public async Task<IReadOnlyList<ReaderLoanSummary>> GetActiveLoansAsync(long readerId)
+        {
+            return await _context.Loans.AsNoTracking()
+                .Where(l => l.ReaderId == readerId && l.ReturnedAt == null)
+                .OrderBy(l => l.DueDate)
+                .Select(l => new ReaderLoanSummary(l.Copy.BookId, l.Copy.Book.Title, l.Copy.InventoryNumber, l.DueDate))
+                .ToListAsync();
         }
     }
 }

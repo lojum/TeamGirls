@@ -6,6 +6,6 @@ public interface IWindowNavigationService
     void ShowLogin();
     void ShowRegistration();
     void ShowAdminDashboard(string adminName);
-    void ShowLibrarianDashboard(string librarianName);
-    void ShowReaderDashboard(string readerName);
+    void ShowLibrarianDashboard(string librarianName, long librarianId);
+    void ShowReaderDashboard(string readerName, long readerId);
 }

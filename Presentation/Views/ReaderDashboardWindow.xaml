@@ -409,7 +409,7 @@
                                                     <Style TargetType="Border">
                                                         <Setter Property="Background" Value="#E0F5E5"/>
                                                         <Style.Triggers>
-                                                            <DataTrigger Binding="{Binding IsBorrowed}" Value="True">
+                                                            <DataTrigger Binding="{Binding IsMuted}" Value="True">
                                                                 <Setter Property="Background" Value="#F0F0F0"/>
                                                             </DataTrigger>
                                                         </Style.Triggers>
@@ -420,7 +420,7 @@
                                                         <Style TargetType="TextBlock">
                                                             <Setter Property="Foreground" Value="#33824D"/>
                                                             <Style.Triggers>
-                                                                <DataTrigger Binding="{Binding IsBorrowed}" Value="True">
+                                                                <DataTrigger Binding="{Binding IsMuted}" Value="True">
                                                                     <Setter Property="Foreground" Value="#70737B"/>
                                                                 </DataTrigger>
                                                             </Style.Triggers>

@@ -28,6 +28,24 @@ namespace SmartLib.Tests.TestData
             CopyStatus.WrittenOff
         };
 
+        // Нестандартний термін видачі (днів) і очікувана дата повернення від Now
+        public static TheoryData<int, DateTime> CustomDurations => new()
+        {
+            { 7, new DateTime(2026, 11, 4) },
+            { 21, new DateTime(2026, 11, 18) },
+            { 30, new DateTime(2026, 11, 27) }
+        };
+
+        // Термін поза межами 1..60 днів
+        public static TheoryData<int> InvalidDurations => new()
+        {
+            0,
+            -1,
+            61
+        };
+
+        public const string InvalidDurationMessage = "Loan duration must be between 1 and 60 days";
+
         // Порожній інвентарний номер або email
         public static TheoryData<string, string> EmptyInputs => new()
         {

@@ -5,11 +5,12 @@ namespace Presentation.Views
 {
     public partial class ReaderDashboardWindow : Window
     {
-        public ReaderDashboardWindow(string readerName, ReaderDashboardViewModel viewModel)
+        public ReaderDashboardWindow(string readerName, long readerId, ReaderDashboardViewModel viewModel)
         {
             InitializeComponent();
-            viewModel.SetReaderName(readerName);
+            viewModel.SetReader(readerName, readerId);
             DataContext = viewModel;
+            Loaded += async (_, _) => await viewModel.LoadAsync();
         }
     }
 }
