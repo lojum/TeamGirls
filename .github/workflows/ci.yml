@@ -104,6 +104,9 @@ jobs:
     env:
       MIN_BUSINESS_LOGIC_COVERAGE: 85
     steps:
+      # Вихідний код потрібен, щоб HTML-звіт показував рядки коду
+      - uses: actions/checkout@v6
+
       - uses: actions/setup-dotnet@v5
         with:
           dotnet-version: 8.0.x
@@ -113,6 +116,24 @@ jobs:
         with:
           pattern: '*-test-results'
           path: results
+
+      # Модульні тести йдуть на Windows (D:\a\...), інтеграційні на Linux (/home/runner/...).
+      # Без спільного кореня ReportGenerator вважає це різними файлами й не підсумовує покриття.
+      - name: Normalize coverage paths
+        run: |
+          python3 - <<'PY'
+          import glob, os
+          import xml.etree.ElementTree as ET
+          root = os.environ["GITHUB_WORKSPACE"] + "/"
+          for path in glob.glob("results/**/coverage.cobertura.xml", recursive=True):
+              tree = ET.parse(path)
+              for source in tree.getroot().iter("source"):
+                  source.text = root
+              for cls in tree.getroot().iter("class"):
+                  cls.set("filename", cls.get("filename").replace("\\", "/"))
+              tree.write(path, encoding="utf-8", xml_declaration=True)
+              print(f"normalized {path}")
+          PY
 
       - name: Merge coverage of unit and integration tests
         run: |
