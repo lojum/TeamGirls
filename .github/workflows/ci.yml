@@ -1,0 +1,180 @@
+name: CI
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Новий push у ту саму гілку скасовує застарілий запуск
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  DOTNET_NOLOGO: true
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+
+jobs:
+  build-and-test:
+    name: Build & unit tests
+    # Рішення містить WPF-проєкт Presentation, тому збирання на Windows
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Restore
+        run: dotnet restore SmartLib.sln
+
+      - name: Build solution (Release)
+        run: dotnet build SmartLib.sln --configuration Release --no-restore
+
+      - name: Unit tests
+        run: >
+          dotnet test SmartLib.Tests/SmartLib.Tests.csproj --configuration Release --no-build
+          --logger "trx;LogFileName=unit-tests.trx"
+          --collect:"XPlat Code Coverage" --results-directory TestResults
+
+      - name: Publish application
+        run: dotnet publish Presentation/Presentation.csproj --configuration Release --no-build --output publish
+
+      - name: Upload application
+        uses: actions/upload-artifact@v6
+        with:
+          name: SmartLib-app
+          path: publish
+
+      - name: Upload unit test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: unit-test-results
+          path: TestResults
+
+  integration-tests:
+    name: Integration tests (PostgreSQL)
+    # Контейнер бази піднімає GitHub Actions, тому потрібен Linux-раннер
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Тимчасова база лише для тестів, не робоча
+      SMARTLIB_TEST_DB: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Integration tests
+        run: >
+          dotnet test SmartLib.IntegrationTests/SmartLib.IntegrationTests.csproj --configuration Release
+          --logger "trx;LogFileName=integration-tests.trx"
+          --collect:"XPlat Code Coverage" --results-directory IntegrationResults
+
+      - name: Upload integration test results
+        if: always()
+        uses: actions/upload-artifact@v6
+        with:
+          name: integration-test-results
+          path: IntegrationResults
+
+  coverage:
+    name: Coverage report & threshold
+    needs: [ build-and-test, integration-tests ]
+    runs-on: ubuntu-latest
+    env:
+      MIN_BUSINESS_LOGIC_COVERAGE: 85
+    steps:
+      # Вихідний код потрібен, щоб HTML-звіт показував рядки коду
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Download test results
+        uses: actions/download-artifact@v7
+        with:
+          pattern: '*-test-results'
+          path: results
+
+      # Модульні тести йдуть на Windows (D:\a\...), інтеграційні на Linux (/home/runner/...).
+      # Без спільного кореня ReportGenerator вважає це різними файлами й не підсумовує покриття.
+      - name: Normalize coverage paths
+        run: |
+          python3 - <<'PY'
+          import glob, os
+          import xml.etree.ElementTree as ET
+          root = os.environ["GITHUB_WORKSPACE"] + "/"
+          for path in glob.glob("results/**/coverage.cobertura.xml", recursive=True):
+              tree = ET.parse(path)
+              for source in tree.getroot().iter("source"):
+                  source.text = root
+              for cls in tree.getroot().iter("class"):
+                  cls.set("filename", cls.get("filename").replace("\\", "/"))
+              tree.write(path, encoding="utf-8", xml_declaration=True)
+              print(f"normalized {path}")
+          PY
+
+      - name: Merge coverage of unit and integration tests
+        run: |
+          dotnet tool install dotnet-reportgenerator-globaltool --version 5.4.5 --tool-path tools
+          tools/reportgenerator "-reports:results/**/coverage.cobertura.xml" -targetdir:coverage-report \
+            "-reporttypes:Html;MarkdownSummaryGithub;JsonSummary" \
+            "-assemblyfilters:+BusinessLogic;+DataAccess;+Domain"
+          cat coverage-report/SummaryGithub.md >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Check BusinessLogic coverage threshold
+        run: |
+          python3 - <<'PY'
+          import json, os, sys
+          minimum = float(os.environ["MIN_BUSINESS_LOGIC_COVERAGE"])
+          summary = json.load(open("coverage-report/Summary.json"))
+          coverage = next(a["coverage"] for a in summary["coverage"]["assemblies"] if a["name"] == "BusinessLogic")
+          message = f"BusinessLogic line coverage: {coverage}% (minimum {minimum:g}%)"
+          print(message)
+          with open(os.environ["GITHUB_STEP_SUMMARY"], "a") as f:
+              f.write(f"\n**{message}**\n")
+          if coverage < minimum:
+              print(f"::error::{message}")
+              sys.exit(1)
+          PY
+
+      - name: Upload coverage report
+        uses: actions/upload-artifact@v6
+        with:
+          name: coverage-report
+          path: coverage-report
+
+  code-style:
+    name: Code style (dotnet format)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-dotnet@v5
+        with:
+          dotnet-version: 8.0.x
+
+      # Пробіли, відступи й порожні рядки за правилами .editorconfig
+      - name: Check formatting
+        run: dotnet format whitespace . --folder --verify-no-changes --verbosity normal

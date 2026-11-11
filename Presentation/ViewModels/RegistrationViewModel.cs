@@ -52,13 +52,13 @@ namespace Presentation.ViewModels
 
         private void ValidateInput()
         {
-            
+
             IsSubmitEnabled = RegistrationValidator.IsValidInput(FullName, Email, Password, ConfirmPassword);
         }
 
         private async void ExecuteRegister(object? obj)
         {
-           
+
             bool isNameValid = !string.IsNullOrWhiteSpace(FullName) && FullName.Length <= 150;
             NameErrorVisibility = isNameValid ? Visibility.Collapsed : Visibility.Visible;
 
@@ -71,7 +71,7 @@ namespace Presentation.ViewModels
             bool isConfirmPasswordValid = Password == ConfirmPassword;
             ConfirmPasswordErrorVisibility = isConfirmPasswordValid ? Visibility.Collapsed : Visibility.Visible;
 
-            
+
             if (!isNameValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid)
                 return;
 

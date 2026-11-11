@@ -1,5 +1,8 @@
 # SmartLib — система управління бібліотекою
 
+[![CI](https://github.com/lojum/TeamGirls/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/lojum/TeamGirls/actions/workflows/ci.yml)
+[![CodeQL](https://github.com/lojum/TeamGirls/actions/workflows/codeql.yml/badge.svg?branch=main)](https://github.com/lojum/TeamGirls/actions/workflows/codeql.yml)
+
 SmartLib — це настільний застосунок для автоматизації роботи бібліотекаря та обліку книжкового фонду.
 
 ## Проблема та мета проєкту

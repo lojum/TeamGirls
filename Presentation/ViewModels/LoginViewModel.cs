@@ -15,10 +15,10 @@ namespace Presentation.ViewModels
     {
         private readonly IAuthService _authService;
         private readonly IWindowNavigationService _navigationService;
-        
+
         private string _email = "";
         private string _password = "";
-        
+
         private Visibility _emailErrorVisibility = Visibility.Collapsed;
         private Visibility _passwordErrorVisibility = Visibility.Collapsed;
         private Visibility _loginErrorVisibility = Visibility.Collapsed;
