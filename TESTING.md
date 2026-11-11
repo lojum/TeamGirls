@@ -6,7 +6,7 @@
 |---|---|---|---|
 | Модульні (unit) | `PasswordHasher`, `AuthService`, `BookService`, `LoanService` | xUnit + EF Core InMemory (для `BookService` — список у пам'яті) | `SmartLib.Tests/Services` |
 | Перевірка моделі БД | Відповідність моделі EF до `schema.sql`: назви таблиць, колонок і представлення `v_book_catalog`, типи `date` | xUnit + провайдер Npgsql (без підключення до бази) | `SmartLib.Tests/DataAccess` |
-| Інтеграційні (наступний крок) | Тригер `trg_loans_sync_copy`, `DOMAIN`, унікальні індекси на справжній PostgreSQL | xUnit + Testcontainers.PostgreSql | — |
+| Інтеграційні | Тригер `trg_loans_sync_copy`, `DOMAIN`, CHECK, унікальні індекси, представлення `v_book_catalog`, сервіси разом зі справжньою PostgreSQL | xUnit + PostgreSQL (Testcontainers або сервер з `SMARTLIB_TEST_DB`) | `SmartLib.IntegrationTests` (розділ 8) |
 | Ручні | Вікна WPF: вхід, реєстрація, адмін-панель | Чек-лист (розділ 5) | — |
 
 Принципи:
@@ -133,6 +133,40 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
 
 ## 7. Що лишається
 
-- Інтеграційні тести на справжній PostgreSQL (Testcontainers): тригер синхронізації статусу, `DOMAIN` (ISBN, рік), унікальний email без урахування регістру, одна активна видача на примірник.
 - Винести фільтрацію і сторінки боржників з `AdminDashboardViewModel` в окремий клас без WPF і покрити тестами.
 - Перенести рядок підключення з паролем з `appsettings.json` у user-secrets і змінити пароль бази.
+
+## 8. Інтеграційні тести (`SmartLib.IntegrationTests`, 30)
+
+Окремий проєкт без WPF (`net8.0`). Перевіряє те, чого не бачать модульні тести з EF InMemory: SQL, тригери, `DOMAIN`, CHECK-обмеження, індекси й представлення.
+
+**Як влаштовано (за схемою «тест → сервіс → справжня база»):**
+- `Infrastructure/PostgresServer.cs` — сервер PostgreSQL, спільний для всіх тестів. Якщо задано змінну `SMARTLIB_TEST_DB`, використовується цей сервер (так працює CI). Інакше Testcontainers запускає `postgres:16-alpine` у Docker.
+- `Infrastructure/TestDatabase.cs` — для **кожного тесту** окрема база `smartlib_tests_<guid>`, створена тим самим `schema.sql`, що й робоча (разом із його тестовими даними). Після тесту база видаляється, навіть якщо тест упав.
+- `Infrastructure/IntegrationTestBase.cs` — `IAsyncLifetime`: `InitializeAsync` створює базу, `DisposeAsync` видаляє.
+- `DbContext` у тестах створюється тим самим методом `DependencyInjection.CreateDataSource` / `UseSmartLibDatabase`, що й у застосунку, тож перевіряється справжня конфігурація підключення.
+- Результат перевіряється окремим SQL-запитом до бази, а не лише викликом методу.
+- Дані — у `TestData/SeedData.cs` (тестові дані зі `schema.sql`) і `TestData/ConstraintTestData.cs` (значення для `DOMAIN` і обмежень).
+
+| Клас | Що перевіряє |
+|---|---|
+| `SchemaConstraintTests` | `schema.sql` можна запустити повторно без помилок і дублів; ISBN: 4 коректні та 4 некоректні формати; рік видання: межі 1000 і 2100 приймаються, 999 і 2101 — ні; некоректний email; той самий email в іншому регістрі (індекс `ux_users_email`); списаний примірник без дати списання (`ck_writeoff_consistent`) |
+| `LoanTriggerTests` | видача через `LoanService` → тригер ставить примірнику `on_loan`, `due_date` збережено як дата; повернення → `available`; видача списаного примірника → помилка тригера; друга активна видача того самого примірника → індекс `ux_loans_one_active_per_copy`; `LoanService` не створює видачу для виданого примірника |
+| `ServiceIntegrationTests` | `BookService` читає `v_book_catalog` (автори, жанри, кількість примірників, списані не враховуються); зареєстрований через `UserService` читач входить через `AuthService` з email в іншому регістрі; повторна реєстрація з тим самим email → `DuplicateEmailException`; `AdminDashboardService` правильно рахує книги, читачів і боржників |
+
+**Як запустити локально** (один із варіантів):
+
+1. Запустити Docker Desktop, потім:
+   ```bash
+   dotnet test SmartLib.IntegrationTests/SmartLib.IntegrationTests.csproj
+   ```
+2. Без Docker — на власному тестовому сервері PostgreSQL (**ніколи не на робочій базі Supabase**):
+   ```powershell
+   $env:SMARTLIB_TEST_DB = "Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=..."
+   dotnet test SmartLib.IntegrationTests/SmartLib.IntegrationTests.csproj
+   ```
+
+Якщо немає ні Docker, ні змінної, тести падають із поясненням, що робити. У CI вони запускаються окремим завданням `integration-tests` на `ubuntu-latest` з PostgreSQL 16.
+
+**Помилка, яку знайшли інтеграційні тести:** у `schema.sql` у гілці `main` лишилися маркери конфлікту злиття (`<<<<<<<`, `>>>>>>>`) і дубльований блок тестових даних. Модульні тести цього не помітили, а всі 30 інтеграційних тестів упали з `syntax error at or near "<<<<<<<"`. Після виправлення скрипта всі тести зелені.
+
