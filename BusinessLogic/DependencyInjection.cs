@@ -17,18 +17,10 @@ public static class DependencyInjection
         var connectionString = configuration.GetConnectionString("DefaultConnection")
             ?? throw new InvalidOperationException("Connection string 'DefaultConnection' is not configured.");
 
-        services.AddSingleton(_ =>
-        {
-            var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
-            dataSourceBuilder.MapEnum<UserRole>("user_role");
-            dataSourceBuilder.MapEnum<CopyStatus>("copy_status");
-            dataSourceBuilder.MapEnum<ReservationStatus>("reservation_status");
-            return dataSourceBuilder.Build();
-        });
+        services.AddSingleton(_ => CreateDataSource(connectionString));
 
         services.AddDbContext<SmartLibDbContext>((serviceProvider, options) =>
-            options.UseNpgsql(serviceProvider.GetRequiredService<NpgsqlDataSource>())
-                .UseSnakeCaseNamingConvention());
+            options.UseSmartLibDatabase(serviceProvider.GetRequiredService<NpgsqlDataSource>()));
 
         services.AddScoped<IBookService, BookService>();
         services.AddScoped<ILoanService, LoanService>();
@@ -39,5 +31,22 @@ public static class DependencyInjection
         services.AddScoped<ILibrarianDashboardService, LibrarianDashboardService>();
 
         return services;
+    }
+
+    // Спільні налаштування підключення: їх використовують і застосунок, і інтеграційні тести
+    public static NpgsqlDataSource CreateDataSource(string connectionString)
+    {
+        var dataSourceBuilder = new NpgsqlDataSourceBuilder(connectionString);
+        dataSourceBuilder.MapEnum<UserRole>("user_role");
+        dataSourceBuilder.MapEnum<CopyStatus>("copy_status");
+        dataSourceBuilder.MapEnum<ReservationStatus>("reservation_status");
+        return dataSourceBuilder.Build();
+    }
+
+    public static TBuilder UseSmartLibDatabase<TBuilder>(this TBuilder options, NpgsqlDataSource dataSource)
+        where TBuilder : DbContextOptionsBuilder
+    {
+        options.UseNpgsql(dataSource).UseSnakeCaseNamingConvention();
+        return options;
     }
 }

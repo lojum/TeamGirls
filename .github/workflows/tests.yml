@@ -25,3 +25,39 @@ jobs:
         with:
           name: coverage
           path: TestResults/**/coverage.cobertura.xml
+
+  integration-tests:
+    # Інтеграційні тести на справжній PostgreSQL. Контейнер бази піднімає GitHub Actions,
+    # тому потрібен Linux-раннер (windows-latest не запускає Linux-контейнери)
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
+    env:
+      # Тимчасова база лише для тестів, не робоча
+      SMARTLIB_TEST_DB: Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=postgres
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+
+      - name: Run integration tests
+        run: dotnet test SmartLib.IntegrationTests/SmartLib.IntegrationTests.csproj --collect:"XPlat Code Coverage" --results-directory IntegrationResults
+
+      - name: Upload integration coverage
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: integration-coverage
+          path: IntegrationResults/**/coverage.cobertura.xml
