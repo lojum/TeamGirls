@@ -21,5 +21,10 @@ namespace SmartLib.IntegrationTests.TestData
         public const string FrankoAuthor = "Іван Франко";
         public const string FrankoGenre = "Класична література";
         public const string WrittenOffBookTitle = "Перевтілення";
+
+        public const int LocationsCount = 3;
+        public const string AvailableCopyRoom = "Головний зал";
+        public const string AvailableCopyShelf = "Стелаж 1A";
+        public const decimal OverdueFineAmount = 50.00m;
     }
 }

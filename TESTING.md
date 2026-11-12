@@ -42,7 +42,7 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 У Visual Studio Code (розширення C# Dev Kit): вкладка Testing (іконка колби) → Run Tests.
 Тести також запускаються автоматично на кожен pull request (`.github/workflows/ci.yml`, опис — у `CI.md`).
 
-## 3. Автоматизовані тести (142 модульні + 30 інтеграційних)
+## 3. Автоматизовані тести (135 модульних + 32 інтеграційні)
 
 | Клас | Що перевіряє |
 |---|---|
@@ -57,7 +57,8 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 | `LibrarianDashboardViewModelTests` | завантаження таблиці й списків; помилка бази; пошук у таблиці; видача передає інвентарний номер, email, id бібліотекаря і термін; повідомлення з `LoanException`; видача без вибору читача й книги; дата повернення за обраним терміном |
 | `ReaderBookStatusTests` | статус книги в кабінеті читача: видана цьому читачеві, є вільні примірники, немає вільних |
 | `RegistrationViewModelTests` (Оксана) | валідація форми реєстрації; кнопка реєстрації стає активною |
-| `DbContextMappingTests` | колонки `book_authors` і `book_genres`; колонки представлення `v_book_catalog`; тип `date` для `due_date`, `acquired_at`, `written_off_at`; назви таблиць; колонки `loans` |
+| `DbContextMappingTests` | колонки `book_authors` і `book_genres`; колонки представлення `v_book_catalog`; тип `date` для `due_date`, `acquired_at`, `written_off_at`; назви таблиць (разом із `fines` і `locations`); колонки `loans`, `book_copies`, `fines`, `locations` |
+| `RegistrationValidatorTests` | окремі правила реєстрації на межах: ім'я 150/151 символ і з пробілів, пароль 7/8 символів, збіг паролів з урахуванням регістру, формат email |
 
 ### 3.1. Тестові дані
 
@@ -72,7 +73,7 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 | `TestData/SchemaTestData.cs` | назви таблиць і колонок зі `schema.sql` | `DbContextMappingTests` |
 | `TestData/LibrarianTestData.cs` | бібліотекар, другий і неактивний читач, інвентарні номери, дати видачі й повернення, примірники й читачі для панелі, пошукові запити й статуси | `LibrarianDashboardServiceTests`, `LibrarianDashboardViewModelTests`, `ReaderBookStatusTests` |
 | `TestData/ServiceTestData.cs` | фіктивний рядок підключення, книги й інвентарні номери для панелі адміністратора, дані нової читачки, список сервісів для перевірки реєстрації | `AdminDashboardServiceTests`, `UserServiceTests`, `DependencyInjectionTests` |
-| `RegistrationTestData.cs` (Оксана) | коректні й некоректні дані форми реєстрації | `RegistrationViewModelTests` |
+| `RegistrationTestData.cs` (Оксана) | коректні й некоректні дані форми реєстрації, межі довжини імені та пароля | `RegistrationViewModelTests`, `RegistrationValidatorTests` |
 
 Приклад:
 
@@ -133,6 +134,7 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
 | `BookCatalogView.ISBN` і `Publisher` були непорожніми рядками, хоча в базі ці колонки можуть бути `NULL`: книга без ISBN зламала б завантаження каталогу | Тип змінено на `string?` | `BookServiceTests.Search_BookWithoutAuthorsAndGenres_IsFoundByTitle`, `DbContextMappingTests.BookCatalogView_MapsToViewColumns` |
 | Тестові дані (email, паролі, хеші, каталог книг, назви колонок) повторювались у різних тестах і займали довгі списки `[InlineData]` | Дані винесено в `SmartLib.Tests/TestData` і передаються через `[MemberData]`; додано коментарі Arrange — Act — Assert і категорії `[Trait]` | усі 70 тестів зелені після перенесення |
 | Після злиття гілок вікна бібліотекаря й читача показували зашиті приклади даних: видача книги і каталог не працювали з базою, `UserId` бібліотекаря губився під час навігації | Новий `LibrarianDashboardService` (примірники, читачі, історія); `LibrarianDashboardViewModel` видає книгу через `LoanService` з обраним терміном і показує повідомлення з `LoanException`; кабінет читача бере каталог через `BookService`, а «My Loans» — через `LoanService.GetActiveLoansAsync`; навігація передає `UserId` | `LibrarianDashboardServiceTests`, `LibrarianDashboardViewModelTests`, `ReaderBookStatusTests`, нові тести `LoanServiceTests` |
+| Старі тести `DatabaseAndDomainTests.cs` перевіряли обчислення всередині самого тесту, а не код програми; сутності `Fine` і `Location` не відповідали схемі (`Section` замість `room`) і не були підключені до бази; правила реєстрації дублювалися у `RegistrationViewModel` | Старі тести видалено (ці правила справжньо перевіряють інтеграційні тести); `Fine` і `Location` виправлено за `schema.sql` і підключено до `SmartLibDbContext`, у `BookCopy` додано місце зберігання; правила реєстрації лише в `RegistrationValidator` | `DbContextMappingTests`, `DomainMappingIntegrationTests`, `RegistrationValidatorTests` |
 | Тестовий проєкт не мав інструментів для бази й покриття | Додано `coverlet.collector`, EF InMemory і глобальний `using Xunit` | запуск у GitHub Actions |
 
 ## 7. Що лишається
@@ -140,7 +142,7 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
 - Винести фільтрацію і сторінки боржників з `AdminDashboardViewModel` в окремий клас без WPF і покрити тестами.
 - Перенести рядок підключення з паролем з `appsettings.json` у user-secrets і змінити пароль бази.
 
-## 8. Інтеграційні тести (`SmartLib.IntegrationTests`, 30)
+## 8. Інтеграційні тести (`SmartLib.IntegrationTests`, 32)
 
 Окремий проєкт без WPF (`net8.0`). Перевіряє те, чого не бачать модульні тести з EF InMemory: SQL, тригери, `DOMAIN`, CHECK-обмеження, індекси й представлення.
 
@@ -157,6 +159,7 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
 | `SchemaConstraintTests` | `schema.sql` можна запустити повторно без помилок і дублів; ISBN: 4 коректні та 4 некоректні формати; рік видання: межі 1000 і 2100 приймаються, 999 і 2101 — ні; некоректний email; той самий email в іншому регістрі (індекс `ux_users_email`); списаний примірник без дати списання (`ck_writeoff_consistent`) |
 | `LoanTriggerTests` | видача через `LoanService` → тригер ставить примірнику `on_loan`, `due_date` збережено як дата; повернення → `available`; видача списаного примірника → помилка тригера; друга активна видача того самого примірника → індекс `ux_loans_one_active_per_copy`; `LoanService` не створює видачу для виданого примірника |
 | `ServiceIntegrationTests` | `BookService` читає `v_book_catalog` (автори, жанри, кількість примірників, списані не враховуються); зареєстрований через `UserService` читач входить через `AuthService` з email в іншому регістрі; повторна реєстрація з тим самим email → `DuplicateEmailException`; `AdminDashboardService` правильно рахує книги, читачів і боржників |
+| `DomainMappingIntegrationTests` | сутності `Fine` і `Location` читаються з таблиць `fines` і `locations`: штраф за прострочену видачу з сумою 50.00, примірник із залом і стелажем |
 
 **Як запустити локально** (один із варіантів):
 

@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel;
-using System.Net.Mail;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -58,19 +57,17 @@ namespace Presentation.ViewModels
 
         private async void ExecuteRegister(object? obj)
         {
-
-            bool isNameValid = !string.IsNullOrWhiteSpace(FullName) && FullName.Length <= 150;
+            bool isNameValid = RegistrationValidator.IsValidName(FullName);
             NameErrorVisibility = isNameValid ? Visibility.Collapsed : Visibility.Visible;
 
-            bool isEmailValid = !string.IsNullOrWhiteSpace(Email) && MailAddress.TryCreate(Email, out _);
+            bool isEmailValid = RegistrationValidator.IsValidEmail(Email);
             EmailErrorVisibility = isEmailValid ? Visibility.Collapsed : Visibility.Visible;
 
-            bool isPasswordValid = !string.IsNullOrWhiteSpace(Password) && Password.Length >= 8;
+            bool isPasswordValid = RegistrationValidator.IsValidPassword(Password);
             PasswordErrorVisibility = isPasswordValid ? Visibility.Collapsed : Visibility.Visible;
 
-            bool isConfirmPasswordValid = Password == ConfirmPassword;
+            bool isConfirmPasswordValid = RegistrationValidator.PasswordsMatch(Password, ConfirmPassword);
             ConfirmPasswordErrorVisibility = isConfirmPasswordValid ? Visibility.Collapsed : Visibility.Visible;
-
 
             if (!isNameValid || !isEmailValid || !isPasswordValid || !isConfirmPasswordValid)
                 return;
