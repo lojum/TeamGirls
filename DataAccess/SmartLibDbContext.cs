@@ -13,6 +13,8 @@ namespace DataAccess
         public DbSet<BookCopy> BookCopies { get; set; }
         public DbSet<Loan> Loans { get; set; }
         public DbSet<Reservation> Reservations { get; set; }
+        public DbSet<Fine> Fines { get; set; }
+        public DbSet<Location> Locations { get; set; }
         public virtual DbSet<BookCatalogView> BookCatalogViews { get; set; }
 
         public SmartLibDbContext(DbContextOptions<SmartLibDbContext> options) : base(options)
@@ -34,6 +36,8 @@ namespace DataAccess
             modelBuilder.Entity<BookCopy>().ToTable("book_copies");
             modelBuilder.Entity<Loan>().ToTable("loans");
             modelBuilder.Entity<Reservation>().ToTable("reservations");
+            modelBuilder.Entity<Fine>().ToTable("fines");
+            modelBuilder.Entity<Location>().ToTable("locations");
 
             // Явно задаємо колонки таблиць зв'язку: інакше EF шукає
             // authors_author_id / books_book_id, яких у schema.sql немає
@@ -59,6 +63,7 @@ namespace DataAccess
             modelBuilder.Entity<Loan>().Property(l => l.DueDate).HasColumnType("date");
             modelBuilder.Entity<BookCopy>().Property(c => c.AcquiredAt).HasColumnType("date");
             modelBuilder.Entity<BookCopy>().Property(c => c.WrittenOffAt).HasColumnType("date");
+            modelBuilder.Entity<Fine>().Property(f => f.Amount).HasPrecision(10, 2);
 
 
             modelBuilder.Entity<Loan>()

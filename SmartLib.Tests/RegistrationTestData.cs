@@ -20,4 +20,19 @@ public static class RegistrationTestData
         { "Оксана", "oksana@smartlib.ua", "123", "123" },
         { "Оксана", "oksana@smartlib.ua", "Pass123!", "Different456!" }
     };
+
+    // Межі правил RegistrationValidator: довжина імені (до 150) і пароля (від 8)
+    public static TheoryData<string, bool> NameCases => new()
+    {
+        { new string('А', 150), true },
+        { new string('А', 151), false },
+        { "   ", false }
+    };
+
+    public static TheoryData<string, bool> PasswordCases => new()
+    {
+        { "Pass123", false },
+        { "Pass1234", true },
+        { "        ", false }
+    };
 }
