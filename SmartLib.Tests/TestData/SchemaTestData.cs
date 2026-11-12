@@ -2,7 +2,6 @@ using Domain.Entities;
 
 namespace SmartLib.Tests.TestData
 {
-    // Назви таблиць і колонок зі schema.sql, з якими має збігатися модель EF
     public static class SchemaTestData
     {
         public static TheoryData<string, string, string> JoinTables => new()
@@ -11,7 +10,6 @@ namespace SmartLib.Tests.TestData
             { "book_genres", "book_id", "genre_id" }
         };
 
-        // Колонки типу DATE (без часу)
         public static TheoryData<Type, string> DateColumns => new()
         {
             { typeof(Loan), nameof(Loan.DueDate) },
@@ -38,7 +36,6 @@ namespace SmartLib.Tests.TestData
             "publication_year", "publisher", "title", "total_copies"
         };
 
-        // Колонки, які EF читає й записує (за абеткою)
         public static TheoryData<Type, string[]> EntityColumns => new()
         {
             { typeof(Loan), new[] { "copy_id", "due_date", "librarian_id", "loan_id", "loaned_at", "reader_id", "returned_at" } },
