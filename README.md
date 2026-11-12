@@ -26,33 +26,6 @@ SmartLib — це настільний застосунок для автома�
 - Бекенд: C#, .NET, LINQ
 - Інтерфейс: Desktop UI 
 
-## Підключення до бази даних (Database connection)
-
-Пароль від бази **не зберігається в репозиторії**. У `Presentation/appsettings.json` рядок підключення порожній, а справжній кожна учасниця зберігає у себе через **user-secrets**. Це файл на комп'ютері розробника, поза папкою проєкту, тож потрапити в Git він не може.
-
-**Налаштування (один раз на кожному комп'ютері):**
-
-1. Отримайте рядок підключення в команди особисто, не через GitHub чи загальний чат. Формат:
-   ```
-   Host=<host>.pooler.supabase.com;Port=5432;Database=postgres;Username=<user>;Password=<password>;Ssl Mode=Require;Trust Server Certificate=true;
-   ```
-2. У корені проєкту виконайте (рядок підключення — у лапках):
-   ```bash
-   dotnet user-secrets set "ConnectionStrings:DefaultConnection" "Host=...;Password=...;" --project Presentation
-   ```
-3. Перевірте:
-   ```bash
-   dotnet user-secrets list --project Presentation
-   ```
-
-Секрет зберігається у `%APPDATA%\Microsoft\UserSecrets\smartlib-presentation-4c7e2f1a-9b3d-4e8a-a6f0-2d5c8b1e7f93\secrets.json`. Замість user-secrets можна задати змінну середовища `SMARTLIB_ConnectionStrings__DefaultConnection`.
-
-Якщо рядок не налаштовано, застосунок під час запуску покаже повідомлення з цією командою.
-
-Модульним тестам (`SmartLib.Tests`) база не потрібна. Інтеграційні тести (`SmartLib.IntegrationTests`) працюють з окремою тестовою PostgreSQL (Docker або `SMARTLIB_TEST_DB`) і **ніколи не підключаються до робочої бази**.
-
-Якщо пароль потрапив у репозиторій або чат, його треба змінити в Supabase (Project Settings → Database → Reset database password) і оновити секрет у кожної учасниці.
-
 ## Архітектура
 
 Застосунок побудований як чотиришарова N-Tier система. Напрямок залежностей:
