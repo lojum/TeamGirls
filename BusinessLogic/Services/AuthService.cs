@@ -41,26 +41,26 @@ namespace BusinessLogic.Services
             }
             catch (Exception exception)
             {
-                _logger.LogError(exception, "Database error during sign-in of {Email}", normalizedEmail);
+                _logger.LogError(exception, "Database error during sign-in");
                 throw;
             }
 
-            // У журнал пишемо лише email і причину; пароль і хеш ніколи не записуються
+            // Персональні дані (email, пароль, хеш) у журнал не пишемо: лише id користувача, якщо він існує, і причину
             if (user == null)
             {
-                _logger.LogWarning("Failed sign-in for {Email}: account not found", normalizedEmail);
+                _logger.LogWarning("Failed sign-in: account not found");
                 return null;
             }
 
             if (!user.IsActive)
             {
-                _logger.LogWarning("Failed sign-in for {Email}: account is inactive", normalizedEmail);
+                _logger.LogWarning("Failed sign-in for user {UserId}: account is inactive", user.UserId);
                 return null;
             }
 
             if (!PasswordHasher.Verify(password, user.PasswordHash))
             {
-                _logger.LogWarning("Failed sign-in for {Email}: wrong password", normalizedEmail);
+                _logger.LogWarning("Failed sign-in for user {UserId}: wrong password", user.UserId);
                 return null;
             }
 
