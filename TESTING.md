@@ -42,11 +42,7 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 У Visual Studio Code (розширення C# Dev Kit): вкладка Testing (іконка колби) → Run Tests.
 Тести також запускаються автоматично на кожен pull request (`.github/workflows/ci.yml`, опис — у `CI.md`).
 
-<<<<<<< Updated upstream
-## 3. Автоматизовані тести (135 модульних + 32 інтеграційні)
-=======
 ## 3. Автоматизовані тести (150 модульних + 34 інтеграційні)
->>>>>>> Stashed changes
 
 | Клас | Що перевіряє |
 |---|---|
@@ -62,10 +58,7 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 | `ReaderBookStatusTests` | статус книги в кабінеті читача: видана цьому читачеві, є вільні примірники, немає вільних |
 | `RegistrationViewModelTests` (Оксана) | валідація форми реєстрації; кнопка реєстрації стає активною |
 | `DbContextMappingTests` | колонки `book_authors` і `book_genres`; колонки представлення `v_book_catalog`; тип `date` для `due_date`, `acquired_at`, `written_off_at`; назви таблиць (разом із `fines` і `locations`); колонки `loans`, `book_copies`, `fines`, `locations` |
-<<<<<<< Updated upstream
-=======
 | `AppLoggingTests` | налаштування Serilog: невдалий вхід записано у файл `smartlib-<дата>.log` з рівнем `WRN` і назвою сервісу, без пароля; файли журналу — у `%LOCALAPPDATA%\SmartLib\logs`, поза репозиторієм |
->>>>>>> Stashed changes
 | `RegistrationValidatorTests` | окремі правила реєстрації на межах: ім'я 150/151 символ і з пробілів, пароль 7/8 символів, збіг паролів з урахуванням регістру, формат email |
 
 ### 3.1. Тестові дані
@@ -152,11 +145,7 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
 - Винести фільтрацію і сторінки боржників з `AdminDashboardViewModel` в окремий клас без WPF і покрити тестами.
 - Перенести рядок підключення з паролем з `appsettings.json` у user-secrets і змінити пароль бази.
 
-<<<<<<< Updated upstream
-## 8. Інтеграційні тести (`SmartLib.IntegrationTests`, 32)
-=======
 ## 8. Інтеграційні тести (`SmartLib.IntegrationTests`, 34)
->>>>>>> Stashed changes
 
 Окремий проєкт без WPF (`net8.0`). Перевіряє те, чого не бачать модульні тести з EF InMemory: SQL, тригери, `DOMAIN`, CHECK-обмеження, індекси й представлення.
 
