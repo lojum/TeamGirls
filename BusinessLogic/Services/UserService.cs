@@ -21,6 +21,15 @@ public sealed class DuplicateEmailException : Exception
     }
 }
 
+// База відхилила ім'я або email за правилами DOMAIN (наприклад, email без домену верхнього рівня)
+public sealed class InvalidUserDataException : Exception
+{
+    public InvalidUserDataException(Exception innerException)
+        : base("The name or email address has an invalid format.", innerException)
+    {
+    }
+}
+
 public sealed class UserService : IUserService
 {
     private readonly SmartLibDbContext _context;
@@ -57,6 +66,16 @@ public sealed class UserService : IUserService
             _context.Entry(user).State = EntityState.Detached;
             _logger.LogWarning("Registration rejected: email {Email} is already in use", user.Email);
             throw new DuplicateEmailException(user.Email, exception);
+        }
+        catch (DbUpdateException exception)
+            when (exception.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.CheckViolation
+            } check)
+        {
+            _context.Entry(user).State = EntityState.Detached;
+            _logger.LogWarning("Registration rejected: data violates database rule {Constraint}", check.ConstraintName);
+            throw new InvalidUserDataException(exception);
         }
         catch (Exception exception)
         {

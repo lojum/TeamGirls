@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using BusinessLogic.Services;
 using DataAccess;
 using Domain.Enums;
@@ -101,6 +102,23 @@ namespace SmartLib.Tests.Services
             Assert.Empty(snapshot.OverdueLoans);
             Assert.Empty(snapshot.Catalog);
             Assert.Empty(snapshot.Readers);
+        }
+
+        [Fact]
+        public async Task GetSnapshot_DatabaseFailure_IsLoggedAndRethrown()
+        {
+            // Arrange
+            var db = TestDb.Create();
+            var logger = new ListLogger<AdminDashboardService>();
+            var service = new AdminDashboardService(db, logger);
+            db.Dispose();
+
+            // Act
+            await Assert.ThrowsAsync<ObjectDisposedException>(() => service.GetSnapshotAsync());
+
+            // Assert
+            var entry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Error, entry.Level);
         }
     }
 }

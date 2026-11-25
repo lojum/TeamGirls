@@ -35,4 +35,21 @@ namespace SmartLib.Tests.Helpers
             InterceptionResult<int> result, CancellationToken cancellationToken = default) =>
             Enabled ? throw _exception : ValueTask.FromResult(result);
     }
+
+    // Замість MessageBox: запам'ятовує повідомлення, які побачив би користувач
+    public sealed class FakeErrorNotifier : Presentation.Services.IErrorNotifier
+    {
+        public List<string> Messages { get; } = new();
+        public Exception? ExceptionToThrow { get; set; }
+        public Action? OnShow { get; set; }
+
+        public void ShowError(string message)
+        {
+            if (ExceptionToThrow is not null)
+                throw ExceptionToThrow;
+
+            Messages.Add(message);
+            OnShow?.Invoke();
+        }
+    }
 }

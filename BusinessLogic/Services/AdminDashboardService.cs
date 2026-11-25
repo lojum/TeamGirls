@@ -1,6 +1,8 @@
 using DataAccess;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace BusinessLogic.Services;
 
@@ -24,13 +26,29 @@ public sealed record AdminDashboardSnapshot(
 public sealed class AdminDashboardService : IAdminDashboardService
 {
     private readonly SmartLibDbContext _context;
+    private readonly ILogger<AdminDashboardService> _logger;
 
-    public AdminDashboardService(SmartLibDbContext context)
+    public AdminDashboardService(SmartLibDbContext context, ILogger<AdminDashboardService>? logger = null)
     {
         _context = context;
+        _logger = logger ?? NullLogger<AdminDashboardService>.Instance;
     }
 
     public async Task<AdminDashboardSnapshot> GetSnapshotAsync()
+    {
+        try
+        {
+            return await LoadSnapshotAsync();
+        }
+        catch (Exception exception)
+        {
+            // Вікно адміністратора покаже зрозуміле повідомлення, а подробиці збою лишаються в журналі
+            _logger.LogError(exception, "Failed to load the admin dashboard");
+            throw;
+        }
+    }
+
+    private async Task<AdminDashboardSnapshot> LoadSnapshotAsync()
     {
         var today = DateTime.UtcNow.Date;
         var totalBooks = await _context.Books.AsNoTracking().CountAsync();
