@@ -52,9 +52,13 @@ namespace SmartLib.IntegrationTests.Infrastructure
             await ExecuteAsync(script);
         }
 
+        // Кожен тест має власну базу, а отже й власний NpgsqlDataSource; EF Core створює для кожного
+        // окремий внутрішній service provider і після 20-го вважає це помилкою. Для тестів це очікувано,
+        // тому попередження вимкнено (у застосунку data source один, і це попередження не виникає)
         public SmartLibDbContext CreateContext(params IInterceptor[] interceptors) =>
             new(new DbContextOptionsBuilder<SmartLibDbContext>()
                 .UseSmartLibDatabase(_dataSource ?? throw new InvalidOperationException("Database is not created."))
+                .ConfigureWarnings(warnings => warnings.Ignore(CoreEventId.ManyServiceProvidersCreatedWarning))
                 .AddInterceptors(interceptors)
                 .Options);
 

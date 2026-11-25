@@ -42,8 +42,22 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 У Visual Studio Code (розширення C# Dev Kit): вкладка Testing (іконка колби) → Run Tests.
 Тести також запускаються автоматично на кожен pull request (`.github/workflows/ci.yml`, опис — у `CI.md`).
 
+## 3. Автоматизовані тести (188 модульних + 48 інтеграційних)
+
+<<<<<<< HEAD
+=======
+|Клас|Що перевіряє|
+|-|-|
+|`PasswordHasherTests`|правильний і неправильний пароль; різні хеші одного пароля (сіль); формат хешу; підтримка BCrypt; 9 варіантів зіпсованого хешу повертають `false` без винятку|
+|`AuthServiceTests`|успішний вхід; email в іншому регістрі та з пробілами; неправильний пароль; невідомий email; неактивний користувач; порожні поля|
+|`BookServiceTests`|пошук за назвою, автором, жанром, точним роком; частина року не збігається; без урахування регістру і зайвих пробілів; частина слова; порожній запит повертає всі книги; немає збігів; спецсимволи та SQL-ін'єкція; книга без авторів і жанрів|
+|`LoanServiceTests`|успішна видача і термін повернення +14 днів; подія `BookLoaned`; невідомий читач; email бібліотекаря; неактивний читач; невідомий примірник; статуси `OnLoan`, `Reserved`, `WrittenOff`; повторна видача того самого примірника; подія не спрацьовує при помилці; порожні поля|
+|`DbContextMappingTests`|колонки `book\\\\\\\\\\\\\\\_authors` і `book\\\\\\\\\\\\\\\_genres`; колонки представлення `v\\\\\\\\\\\\\\\_book\\\\\\\\\\\\\\\_catalog`; тип `date` для `due\\\\\\\\\\\\\\\_date`, `acquired\\\\\\\\\\\\\\\_at`, `written\\\\\\\\\\\\\\\_off\\\\\\\\\\\\\\\_at`; назви таблиць; колонки `loans`|
+Тести також запускаються автоматично на кожен pull request (`.github/workflows/ci.yml`, опис — у `CI.md`).
+
 ## 3. Автоматизовані тести (188 модульних + 39 інтеграційних)
 
+>>>>>>> 8731d395ab857dca8d838be61d826ed92f08d49d
 | Клас | Що перевіряє |
 |---|---|
 | `PasswordHasherTests` | правильний і неправильний пароль; різні хеші одного пароля (сіль); формат хешу; підтримка BCrypt; 9 варіантів зіпсованого хешу повертають `false` без винятку |
@@ -56,7 +70,11 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 | `DependencyInjectionTests` | `AddBusinessLogic` реєструє всі 6 сервісів, `DbContext` налаштований на PostgreSQL, системний годинник; без рядка підключення — зрозуміла помилка |
 | `LibrarianDashboardViewModelTests` | завантаження таблиці й списків; помилка бази; пошук у таблиці; видача передає інвентарний номер, email, id бібліотекаря і термін; повідомлення з `LoanException`; видача без вибору читача й книги; дата повернення за обраним терміном |
 | `ReaderBookStatusTests` | статус книги в кабінеті читача: видана цьому читачеві, є вільні примірники, немає вільних |
+<<<<<<< HEAD
+| `RegistrationViewModelTests` (Оксана) | валідація форми реєстрації; кнопка реєстрації стає активною; email — те саме правило, що й `DOMAIN email_address` у базі: 8 некоректних адрес (зокрема `olena@gmail`, `a@b`, з ім'ям у `<>`, кирилиця, лапки), 5 коректних, довжина понад 255 символів |
+=======
 | `RegistrationViewModelTests` (Оксана) | валідація форми реєстрації; кнопка реєстрації стає активною |
+>>>>>>> 8731d395ab857dca8d838be61d826ed92f08d49d
 | `LoginViewModelTests` (Оксана) | некоректний email не надсилається до сервісу авторизації; неправильний пароль і помилка сервісу показують зрозумілі повідомлення; ролі Librarian, Reader і Admin відкривають відповідну панель |
 | `DbContextMappingTests` | колонки `book_authors` і `book_genres`; колонки представлення `v_book_catalog`; тип `date` для `due_date`, `acquired_at`, `written_off_at`; назви таблиць (разом із `fines` і `locations`); колонки `loans`, `book_copies`, `fines`, `locations` |
 | `AppLoggingTests` | налаштування Serilog: невдалий вхід записано у файл `smartlib-<дата>.log` з рівнем `WRN` і назвою сервісу, без email і пароля; файли журналу — у `%LOCALAPPDATA%\SmartLib\logs`, поза репозиторієм |
@@ -67,6 +85,16 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 
 Дані, які повторювались у кількох тестах або займали довгі списки `[InlineData]`, винесено в окремі статичні класи. Тест лише бере потрібний набір, а самі значення змінюються в одному місці.
 
+<<<<<<< HEAD
+=======
+|Файл|Що містить|Де використовується|
+|-|-|-|
+|`TestData/UserTestData.cs`|email, ім'я та пароль тестового читача, email бібліотекаря, варіанти email у різному регістрі, порожні облікові дані|`AuthServiceTests`, `LoanServiceTests`, `Helpers/TestDb.cs`|
+|`TestData/PasswordTestData.cs`|паролі, хеш тестових користувачів зі `schema.sql`, 9 зіпсованих хешів|`PasswordHasherTests`|
+|`TestData/BookTestData.cs`|тестовий каталог із 4 книг, запити для перевірки регістру, порожні запити, запити без збігів (зокрема SQL-ін'єкція)|`BookServiceTests`|
+|`TestData/LoanTestData.cs`|інвентарні номери, тестова книга, фіксована дата і очікуваний термін повернення, фрагменти повідомлень про помилки, недоступні статуси примірника, порожні вхідні дані|`LoanServiceTests`|
+|`TestData/SchemaTestData.cs`|назви таблиць і колонок зі `schema.sql`|`DbContextMappingTests`|
+>>>>>>> 8731d395ab857dca8d838be61d826ed92f08d49d
 | Файл | Що містить | Де використовується |
 |---|---|---|
 | `TestData/UserTestData.cs` | email, ім'я та пароль тестового читача, email бібліотекаря, варіанти email у різному регістрі, порожні облікові дані | `AuthServiceTests`, `LoanServiceTests`, `Helpers/TestDb.cs` |
@@ -146,9 +174,9 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
 ## 7. Що лишається
 
 - Винести фільтрацію і сторінки боржників з `AdminDashboardViewModel` в окремий клас без WPF і покрити тестами.
-- Перенести рядок підключення з паролем з `appsettings.json` у user-secrets і змінити пароль бази.
+- Обмеження безпеки, які ще не покрито (блокування акаунта після невдалих спроб входу, перевірка ролі в `AdminDashboardService`), — див. `SECURITY.md`, розділ «Відомі обмеження».
 
-## 8. Інтеграційні тести (`SmartLib.IntegrationTests`, 39)
+## 8. Інтеграційні тести (`SmartLib.IntegrationTests`, 48)
 
 Окремий проєкт без WPF (`net8.0`). Перевіряє те, чого не бачать модульні тести з EF InMemory: SQL, тригери, `DOMAIN`, CHECK-обмеження, індекси й представлення.
 
@@ -158,7 +186,7 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
 - `Infrastructure/IntegrationTestBase.cs` — `IAsyncLifetime`: `InitializeAsync` створює базу, `DisposeAsync` видаляє.
 - `DbContext` у тестах створюється тим самим методом `DependencyInjection.CreateDataSource` / `UseSmartLibDatabase`, що й у застосунку, тож перевіряється справжня конфігурація підключення.
 - Результат перевіряється окремим SQL-запитом до бази, а не лише викликом методу.
-- Дані — у `TestData/SeedData.cs` (тестові дані зі `schema.sql`) і `TestData/ConstraintTestData.cs` (значення для `DOMAIN` і обмежень).
+- Дані — у `TestData/SeedData.cs` (тестові дані зі `schema.sql`) `TestData/ConstraintTestData.cs` (значення для `DOMAIN` і обмежень) і `TestData/SecurityTestData.cs` (спроби SQL-ін'єкцій, префікси хешів паролів).
 
 | Клас | Що перевіряє |
 |---|---|
@@ -166,6 +194,7 @@ public void Verify_MalformedHash_ReturnsFalse(string badHash) { ... }
 | `LoanTriggerTests` | видача через `LoanService` → тригер ставить примірнику `on_loan`, `due_date` збережено як дата; повернення → `available`; видача списаного примірника → помилка тригера; друга активна видача того самого примірника → індекс `ux_loans_one_active_per_copy`; `LoanService` не створює видачу для виданого примірника; **одночасна видача**: інший бібліотекар встигає видати примірник перед збереженням (`BeforeSaveInterceptor`) → база відхиляє другу видачу, сервіс повертає зрозуміле повідомлення; адміністратор не може видати книгу |
 | `ServiceIntegrationTests` | `BookService` читає `v_book_catalog` (автори, жанри, кількість примірників, списані не враховуються); зареєстрований через `UserService` читач входить через `AuthService` з email в іншому регістрі; повторна реєстрація з тим самим email → `DuplicateEmailException`; 5 адрес, які `MailAddress` пропускає, а `DOMAIN email_address` відхиляє (`olena@gmail`, `a@b`, з ім'ям у `<>`, кирилиця, лапки) → `InvalidUserDataException`, користувача не створено; `AdminDashboardService` правильно рахує книги, читачів і боржників |
 | `DomainMappingIntegrationTests` | сутності `Fine` і `Location` читаються з таблиць `fines` і `locations`: штраф за прострочену видачу з сумою 50.00, примірник із залом і стелажем |
+| `SecurityIntegrationTests` (Софія) | базова перевірка безпеки на справжній PostgreSQL: 4 спроби SQL-ін'єкції в пошуку книг — порожній результат, таблиці `books` і `users` не змінилися; ті самі 4 рядки як email і пароль при вході — вхід не відбувається; усі паролі в базі збережено лише як хеші PBKDF2 або BCrypt |
 
 **Як запустити локально** (один із варіантів):
 
