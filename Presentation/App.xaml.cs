@@ -55,6 +55,8 @@ namespace Presentation
                 services.AddLogging(logging => logging.AddSerilog(dispose: false));
                 services.AddBusinessLogic(Configuration);
                 services.AddSingleton<IWindowNavigationService, WindowNavigationService>();
+                services.AddSingleton<IErrorNotifier, MessageBoxErrorNotifier>();
+                services.AddSingleton<GlobalExceptionHandler>();
                 services.AddTransient<MainViewModel>();
                 services.AddTransient<LoginViewModel>();
                 services.AddTransient<RegistrationViewModel>();
@@ -67,6 +69,9 @@ namespace Presentation
                 services.AddTransient<LibrarianDashboardWindow>();
 
                 ServiceProvider = services.BuildServiceProvider();
+
+                // Від цього моменту будь-який неперехоплений виняток записується в журнал і не закриває застосунок
+                ServiceProvider.GetRequiredService<GlobalExceptionHandler>().Register(this);
                 ServiceProvider.GetRequiredService<IWindowNavigationService>().ShowMain();
             }
             catch (Exception ex)
