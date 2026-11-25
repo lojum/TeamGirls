@@ -10,6 +10,7 @@ using Xunit;
 
 namespace SmartLib.Tests.ViewModels
 {
+    [Trait("Category", "Unit")]
     public class LoginViewModelTests
     {
         [Theory]
@@ -21,7 +22,7 @@ namespace SmartLib.Tests.ViewModels
             var viewModel = new LoginViewModel(auth, navigation)
             {
                 Email = email,
-                Password = "StrongPass123!"
+                Password = LoginTestData.ValidPassword
             };
 
             await viewModel.LoginAsync();
@@ -36,13 +37,13 @@ namespace SmartLib.Tests.ViewModels
             var auth = new FakeAuthService { UserToReturn = null };
             var viewModel = new LoginViewModel(auth, new FakeNavigationService())
             {
-                Email = "reader@smartlib.ua",
-                Password = "wrong-password"
+                Email = LoginTestData.ReaderEmail,
+                Password = LoginTestData.WrongPassword
             };
 
             await viewModel.LoginAsync();
 
-            Assert.Equal("Incorrect email or password, or the account is inactive.", viewModel.LoginErrorMessage);
+            Assert.Equal(LoginTestData.IncorrectCredentialsMessage, viewModel.LoginErrorMessage);
             Assert.Equal(Visibility.Visible, viewModel.LoginErrorVisibility);
             Assert.True(viewModel.IsSubmitEnabled);
         }
@@ -50,16 +51,19 @@ namespace SmartLib.Tests.ViewModels
         [Fact]
         public async Task LoginAsync_ServiceThrows_ShowsDatabaseMessageAndReenablesSubmit()
         {
-            var auth = new FakeAuthService { ExceptionToThrow = new InvalidOperationException("Database unavailable") };
+            var auth = new FakeAuthService
+            {
+                ExceptionToThrow = new InvalidOperationException(LoginTestData.DatabaseExceptionMessage)
+            };
             var viewModel = new LoginViewModel(auth, new FakeNavigationService())
             {
-                Email = "reader@smartlib.ua",
-                Password = "StrongPass123!"
+                Email = LoginTestData.ReaderEmail,
+                Password = LoginTestData.ValidPassword
             };
 
             await viewModel.LoginAsync();
 
-            Assert.Equal("Could not connect to the database. Try again later.", viewModel.LoginErrorMessage);
+            Assert.Equal(LoginTestData.DatabaseErrorMessage, viewModel.LoginErrorMessage);
             Assert.Equal(Visibility.Visible, viewModel.LoginErrorVisibility);
             Assert.True(viewModel.IsSubmitEnabled);
         }
@@ -72,26 +76,26 @@ namespace SmartLib.Tests.ViewModels
             {
                 UserToReturn = new User
                 {
-                    UserId = 42,
-                    FullName = "Test User",
+                    UserId = LoginTestData.TestUserId,
+                    FullName = LoginTestData.TestUserName,
                     Role = role
                 }
             };
             var navigation = new FakeNavigationService();
             var viewModel = new LoginViewModel(auth, navigation)
             {
-                Email = "test@smartlib.ua",
-                Password = "StrongPass123!"
+                Email = LoginTestData.TestEmail,
+                Password = LoginTestData.ValidPassword
             };
 
             await viewModel.LoginAsync();
 
             if (role == UserRole.Librarian)
-                Assert.Equal(("Test User", 42), navigation.LastLibrarian);
+                Assert.Equal((LoginTestData.TestUserName, LoginTestData.TestUserId), navigation.LastLibrarian);
             else if (role == UserRole.Reader)
-                Assert.Equal(("Test User", 42), navigation.LastReader);
+                Assert.Equal((LoginTestData.TestUserName, LoginTestData.TestUserId), navigation.LastReader);
             else
-                Assert.Equal("Test User", navigation.LastAdminName);
+                Assert.Equal(LoginTestData.TestUserName, navigation.LastAdminName);
         }
     }
 }

@@ -42,7 +42,7 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 У Visual Studio Code (розширення C# Dev Kit): вкладка Testing (іконка колби) → Run Tests.
 Тести також запускаються автоматично на кожен pull request (`.github/workflows/ci.yml`, опис — у `CI.md`).
 
-## 3. Автоматизовані тести (161 модульний + 39 інтеграційних)
+## 3. Автоматизовані тести (188 модульних + 39 інтеграційних)
 
 | Клас | Що перевіряє |
 |---|---|
@@ -57,6 +57,7 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 | `LibrarianDashboardViewModelTests` | завантаження таблиці й списків; помилка бази; пошук у таблиці; видача передає інвентарний номер, email, id бібліотекаря і термін; повідомлення з `LoanException`; видача без вибору читача й книги; дата повернення за обраним терміном |
 | `ReaderBookStatusTests` | статус книги в кабінеті читача: видана цьому читачеві, є вільні примірники, немає вільних |
 | `RegistrationViewModelTests` (Оксана) | валідація форми реєстрації; кнопка реєстрації стає активною |
+| `LoginViewModelTests` (Оксана) | некоректний email не надсилається до сервісу авторизації; неправильний пароль і помилка сервісу показують зрозумілі повідомлення; ролі Librarian, Reader і Admin відкривають відповідну панель |
 | `DbContextMappingTests` | колонки `book_authors` і `book_genres`; колонки представлення `v_book_catalog`; тип `date` для `due_date`, `acquired_at`, `written_off_at`; назви таблиць (разом із `fines` і `locations`); колонки `loans`, `book_copies`, `fines`, `locations` |
 | `AppLoggingTests` | налаштування Serilog: невдалий вхід записано у файл `smartlib-<дата>.log` з рівнем `WRN` і назвою сервісу, без email і пароля; файли журналу — у `%LOCALAPPDATA%\SmartLib\logs`, поза репозиторієм |
 | `GlobalExceptionHandlerTests` | неперехоплений виняток в інтерфейсі → запис Error, зрозуміле повідомлення без технічного тексту, застосунок не закривається; збій показу повідомлення; повторна помилка не відкриває друге вікно; критична помилка → Critical; виняток фонового завдання → Error |
@@ -76,6 +77,7 @@ dotnet test SmartLib.Tests/SmartLib.Tests.csproj --filter "Category=Mapping"
 | `TestData/LibrarianTestData.cs` | бібліотекар, другий і неактивний читач, інвентарні номери, дати видачі й повернення, примірники й читачі для панелі, пошукові запити й статуси | `LibrarianDashboardServiceTests`, `LibrarianDashboardViewModelTests`, `ReaderBookStatusTests` |
 | `TestData/ServiceTestData.cs` | фіктивний рядок підключення, книги й інвентарні номери для панелі адміністратора, дані нової читачки, список сервісів для перевірки реєстрації | `AdminDashboardServiceTests`, `UserServiceTests`, `DependencyInjectionTests` |
 | `RegistrationTestData.cs` (Оксана) | коректні й некоректні дані форми реєстрації, межі довжини імені та пароля | `RegistrationViewModelTests`, `RegistrationValidatorTests` |
+| `TestData/LoginTestData.cs` (Оксана) | email, паролі, ідентифікатор і назва тестового користувача, тексти помилок і ролі для перевірки входу | `LoginViewModelTests` |
 
 Приклад:
 
