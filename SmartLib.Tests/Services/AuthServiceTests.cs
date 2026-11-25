@@ -111,13 +111,14 @@ namespace SmartLib.Tests.Services
             var entry = Assert.Single(logger.Entries);
             Assert.Equal(LogLevel.Information, entry.Level);
             Assert.Contains(nameof(UserRole.Reader), entry.Message);
+            Assert.DoesNotContain(UserTestData.ReaderEmail, entry.Message, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(UserTestData.ReaderPassword, entry.Message);
         }
 
-        // Невдалий вхід записується з причиною, але пароль у журнал не потрапляє
+        // Невдалий вхід записується з причиною, але email і пароль (персональні дані) у журнал не потрапляють
         [Theory]
         [MemberData(nameof(UserTestData.FailedSignIns), MemberType = typeof(UserTestData))]
-        public async Task Authenticate_Failure_LogsWarningWithReasonButNoPassword(
+        public async Task Authenticate_Failure_LogsWarningWithReasonButNoPersonalData(
             string email, string password, bool readerActive, string expectedReason)
         {
             // Arrange
@@ -132,6 +133,7 @@ namespace SmartLib.Tests.Services
             var entry = Assert.Single(logger.Entries);
             Assert.Equal(LogLevel.Warning, entry.Level);
             Assert.Contains(expectedReason, entry.Message);
+            Assert.DoesNotContain(email.Trim(), entry.Message, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(password, entry.Message);
         }
 

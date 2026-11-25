@@ -1,6 +1,7 @@
 using BusinessLogic.Services;
 using Domain.Entities;
 using Presentation.Services;
+using Domain.Enums;
 
 namespace SmartLib.Tests.Helpers
 {
@@ -56,12 +57,36 @@ namespace SmartLib.Tests.Helpers
     public sealed class FakeNavigationService : IWindowNavigationService
     {
         public bool MainShown { get; private set; }
+        public string? LastAdminName { get; private set; }
+        public (string Name, long Id)? LastLibrarian { get; private set; }
+        public (string Name, long Id)? LastReader { get; private set; }
 
         public void ShowMain() => MainShown = true;
         public void ShowLogin() { }
         public void ShowRegistration() { }
-        public void ShowAdminDashboard(string adminName) { }
-        public void ShowLibrarianDashboard(string librarianName, long librarianId) { }
-        public void ShowReaderDashboard(string readerName, long readerId) { }
+        public void ShowAdminDashboard(string adminName) => LastAdminName = adminName;
+        public void ShowLibrarianDashboard(string librarianName, long librarianId) =>
+            LastLibrarian = (librarianName, librarianId);
+        public void ShowReaderDashboard(string readerName, long readerId) =>
+            LastReader = (readerName, readerId);
+    }
+
+    public sealed class FakeAuthService : IAuthService
+    {
+        public User? UserToReturn { get; set; }
+        public Exception? ExceptionToThrow { get; set; }
+        public int AuthenticateCallCount { get; private set; }
+        public (string Email, string Password)? LastCredentials { get; private set; }
+
+        public Task<User?> AuthenticateAsync(string email, string password)
+        {
+            AuthenticateCallCount++;
+            LastCredentials = (email, password);
+
+            if (ExceptionToThrow is not null)
+                throw ExceptionToThrow;
+
+            return Task.FromResult(UserToReturn);
+        }
     }
 }
