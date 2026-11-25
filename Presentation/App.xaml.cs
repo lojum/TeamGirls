@@ -4,6 +4,7 @@ using System.Windows;
 using BusinessLogic;
 using Microsoft.Extensions.Configuration;
 using Microsoft.Extensions.DependencyInjection;
+using Serilog;
 using Presentation.Services;
 using Presentation.ViewModels;
 using Presentation.Views;
@@ -21,6 +22,10 @@ namespace Presentation
         {
             base.OnStartup(e);
 
+            // Журнал налаштовуємо першим, щоб записати навіть збій під час запуску
+            Log.Logger = AppLogging.CreateLogger(AppLogging.DefaultDirectory);
+            Log.Information("SmartLib is starting");
+
             try
             {
                 // Пароль бази не зберігається в репозиторії: рядок підключення береться з user-secrets
@@ -35,6 +40,7 @@ namespace Presentation
 
                 if (string.IsNullOrWhiteSpace(Configuration.GetConnectionString(ConnectionStringName)))
                 {
+                    Log.Warning("Startup stopped: connection string {Name} is not configured", ConnectionStringName);
                     MessageBox.Show(
                         "The database connection string is not configured.\n\n" +
                         "Run this command in the project folder (ask the team for the connection string):\n\n" +
@@ -46,6 +52,7 @@ namespace Presentation
                 }
 
                 var services = new ServiceCollection();
+                services.AddLogging(logging => logging.AddSerilog(dispose: false));
                 services.AddBusinessLogic(Configuration);
                 services.AddSingleton<IWindowNavigationService, WindowNavigationService>();
                 services.AddTransient<MainViewModel>();
@@ -64,6 +71,7 @@ namespace Presentation
             }
             catch (Exception ex)
             {
+                Log.Fatal(ex, "SmartLib failed to start");
                 MessageBox.Show($"Critical error on startup:\n{ex.Message}", "Startup Error", MessageBoxButton.OK, MessageBoxImage.Error);
                 Current.Shutdown();
             }
@@ -72,6 +80,8 @@ namespace Presentation
         protected override void OnExit(ExitEventArgs e)
         {
             (ServiceProvider as IDisposable)?.Dispose();
+            Log.Information("SmartLib stopped");
+            Log.CloseAndFlush();
             base.OnExit(e);
         }
     }

@@ -1,6 +1,7 @@
 using BusinessLogic.Services;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using SmartLib.Tests.Helpers;
 using SmartLib.Tests.TestData;
 using static SmartLib.Tests.TestData.ServiceTestData;
@@ -28,6 +29,22 @@ namespace SmartLib.Tests.Services
             Assert.True(user.IsActive);
             Assert.NotEqual(NewReaderPassword, user.PasswordHash);
             Assert.True(PasswordHasher.Verify(NewReaderPassword, user.PasswordHash));
+        }
+
+        [Fact]
+        public async Task RegisterReader_Success_LogsNewReaderWithoutPassword()
+        {
+            // Arrange
+            using var db = TestDb.Create();
+            var logger = new ListLogger<UserService>();
+
+            // Act
+            await new UserService(db, logger).RegisterReaderAsync(NewReaderName, NewReaderEmail, NewReaderPassword);
+
+            // Assert
+            var entry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Information, entry.Level);
+            Assert.DoesNotContain(NewReaderPassword, entry.Message);
         }
 
         [Fact]

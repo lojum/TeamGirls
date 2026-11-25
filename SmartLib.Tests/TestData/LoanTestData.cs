@@ -19,6 +19,19 @@ namespace SmartLib.Tests.TestData
         public const string ReaderNotFoundMessage = "Reader with this email was not found";
         public const string InactiveReaderMessage = "inactive";
         public const string CopyNotFoundMessage = "No book copy found";
+        public const string NotLibrarianMessage = "Only an active librarian can issue books";
+        public const string CopyJustIssuedMessage = "has just been issued to another reader";
+
+        // Хто не має права видавати книги: (роль, активний). Бібліотекар додається з ідентифікатором LibrarianId
+        public static TheoryData<UserRole, bool> NotAllowedIssuers => new()
+        {
+            { UserRole.Reader, true },
+            { UserRole.Admin, true },
+            { UserRole.Librarian, false }
+        };
+
+        // Ідентифікатор, якого немає в базі
+        public const long UnknownLibrarianId = 999;
 
         // Статуси, у яких примірник видати не можна
         public static TheoryData<CopyStatus> UnavailableStatuses => new()

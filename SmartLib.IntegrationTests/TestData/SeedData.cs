@@ -8,6 +8,8 @@ namespace SmartLib.IntegrationTests.TestData
 
         public const string ReaderEmail = "olena.b@gmail.com";
         public const string LibrarianEmail = "o.mandzyuvata@smartlib.ua";
+        public const string AdminEmail = "s.shelep@smartlib.ua";
+        public const string OtherReaderEmail = "maria.t@gmail.com";
         public const string OverdueReaderName = "Іван Ковальчук";
 
         public const string AvailableInventory = "INV-00101";
