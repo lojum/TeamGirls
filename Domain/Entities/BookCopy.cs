@@ -10,6 +10,7 @@ namespace Domain.Entities
         [Key]
         public long CopyId { get; set; }
         public long BookId { get; set; }
+        public int? LocationId { get; set; }
         public string InventoryNumber { get; set; } = string.Empty;
         public CopyStatus Status { get; set; } = CopyStatus.Available;
         public DateTime AcquiredAt { get; set; }
@@ -17,6 +18,7 @@ namespace Domain.Entities
         public string? WriteOffReason { get; set; }
 
         public virtual Book Book { get; set; } = null!;
+        public virtual Location? Location { get; set; }
         public virtual ICollection<Loan> Loans { get; set; } = new List<Loan>();
     }
 }

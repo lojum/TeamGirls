@@ -1,3 +1,4 @@
+using Microsoft.Extensions.Logging;
 using BusinessLogic.Services;
 using Domain.Enums;
 using SmartLib.Tests.Helpers;
@@ -117,6 +118,32 @@ namespace SmartLib.Tests.Services
         public void Filter_NoSearchAndNoStatus_ReturnsAllCopies()
         {
             Assert.Equal(Copies().Count, LibrarianDashboardService.Filter(Copies(), "   ", null).Count());
+        }
+
+        // Збій бази (тут — закритий контекст) записується в журнал і передається вікну
+        [Theory]
+        [MemberData(nameof(ErrorHandlingTestData.LibrarianDashboardQueries), MemberType = typeof(ErrorHandlingTestData))]
+        public async Task Query_DatabaseFailure_IsLoggedAndRethrown(string query)
+        {
+            // Arrange
+            var db = TestDb.Create();
+            var logger = new ListLogger<LibrarianDashboardService>();
+            var service = new LibrarianDashboardService(db, logger);
+            db.Dispose();
+
+            // Act
+            Func<Task> act = query switch
+            {
+                "copies" => () => service.GetCopiesAsync(),
+                "readers" => () => service.GetActiveReadersAsync(),
+                _ => () => service.GetRecentActivityAsync()
+            };
+            await Assert.ThrowsAsync<ObjectDisposedException>(act);
+
+            // Assert
+            var entry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Error, entry.Level);
+            Assert.IsType<ObjectDisposedException>(entry.Exception);
         }
     }
 }

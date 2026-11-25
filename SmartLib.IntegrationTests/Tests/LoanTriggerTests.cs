@@ -23,8 +23,7 @@ namespace SmartLib.IntegrationTests.Tests
             // Arrange
             await using var context = Db.CreateContext();
             var service = new LoanService(context, TimeProvider.System);
-            var librarianId = await Db.ScalarAsync<long>(
-                "SELECT user_id FROM users WHERE email = @email", ("email", LibrarianEmail));
+            var librarianId = await UserIdAsync(LibrarianEmail);
 
             // Act
             await service.IssueBookAsync(AvailableInventory, ReaderEmail, librarianId);
@@ -89,14 +88,62 @@ namespace SmartLib.IntegrationTests.Tests
             // Arrange
             await using var context = Db.CreateContext();
             var service = new LoanService(context, TimeProvider.System);
+            var librarianId = await UserIdAsync(LibrarianEmail);
             var loansBefore = await Db.ScalarAsync<long>("SELECT count(*) FROM loans");
 
             // Act
-            await Assert.ThrowsAsync<LoanException>(
-                () => service.IssueBookAsync(LoanedInventory, ReaderEmail, librarianId: 1));
+            var ex = await Assert.ThrowsAsync<LoanException>(
+                () => service.IssueBookAsync(LoanedInventory, ReaderEmail, librarianId));
 
             // Assert
+            Assert.Contains("not available", ex.Message);
             Assert.Equal(loansBefore, await Db.ScalarAsync<long>("SELECT count(*) FROM loans"));
         }
+
+        // Два бібліотекарі видають той самий примірник одночасно: друга видача відхиляється базою,
+        // а користувач отримує зрозуміле повідомлення замість технічної помилки PostgreSQL
+        [Fact]
+        public async Task IssueBook_CopyIssuedConcurrently_SecondLoanRejectedWithFriendlyMessage()
+        {
+            // Arrange: перед збереженням нашої видачі «інший бібліотекар» встигає видати той самий примірник
+            var competingLoan = new BeforeSaveInterceptor(() => Db.ExecuteAsync(
+                "INSERT INTO loans (copy_id, reader_id, due_date) " +
+                "SELECT c.copy_id, u.user_id, CURRENT_DATE + 14 FROM book_copies c, users u " +
+                "WHERE c.inventory_number = @inv AND u.email = @email",
+                ("inv", AvailableInventory), ("email", OtherReaderEmail)));
+            await using var context = Db.CreateContext(competingLoan);
+            var service = new LoanService(context, TimeProvider.System);
+            var librarianId = await UserIdAsync(LibrarianEmail);
+
+            // Act
+            var ex = await Assert.ThrowsAsync<LoanException>(
+                () => service.IssueBookAsync(AvailableInventory, ReaderEmail, librarianId));
+
+            // Assert: лишилася лише видача «іншого бібліотекаря»
+            Assert.Contains("has just been issued", ex.Message);
+            Assert.Equal(1L, await Db.ScalarAsync<long>(
+                "SELECT count(*) FROM loans l JOIN book_copies c USING (copy_id) " +
+                "WHERE c.inventory_number = @inv AND l.returned_at IS NULL", ("inv", AvailableInventory)));
+        }
+
+        [Fact]
+        public async Task IssueBook_ByAdminInsteadOfLibrarian_IsRejected()
+        {
+            // Arrange
+            await using var context = Db.CreateContext();
+            var service = new LoanService(context, TimeProvider.System);
+            var adminId = await UserIdAsync(AdminEmail);
+
+            // Act
+            var ex = await Assert.ThrowsAsync<LoanException>(
+                () => service.IssueBookAsync(AvailableInventory, ReaderEmail, adminId));
+
+            // Assert
+            Assert.Contains("Only an active librarian", ex.Message);
+            Assert.Equal("available", await Db.ScalarAsync<string>(CopyStatusSql, ("inv", AvailableInventory)));
+        }
+
+        private Task<long> UserIdAsync(string email) =>
+            Db.ScalarAsync<long>("SELECT user_id FROM users WHERE email = @email", ("email", email));
     }
 }

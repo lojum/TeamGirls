@@ -1,4 +1,5 @@
 using BusinessLogic.Services;
+using Npgsql;
 using SmartLib.IntegrationTests.Infrastructure;
 using SmartLib.IntegrationTests.TestData;
 using static SmartLib.IntegrationTests.TestData.SeedData;
@@ -73,6 +74,25 @@ namespace SmartLib.IntegrationTests.Tests
             // Act & Assert
             await Assert.ThrowsAsync<DuplicateEmailException>(() => new UserService(context).RegisterReaderAsync(
                 ConstraintTestData.UserName, email, ConstraintTestData.NewReaderPassword));
+        }
+
+        // Якщо email пройшов перевірку форми, але не відповідає правилу бази,
+        // користувач має отримати зрозуміле повідомлення, а не «Could not connect to the database»
+        [Theory]
+        [MemberData(nameof(ConstraintTestData.EmailsRejectedOnlyByDatabase), MemberType = typeof(ConstraintTestData))]
+        public async Task UserService_EmailRejectedByDomain_ThrowsInvalidUserData(string email)
+        {
+            // Arrange
+            await using var context = Db.CreateContext();
+            var usersBefore = await Db.ScalarAsync<long>("SELECT count(*) FROM users");
+
+            // Act
+            var ex = await Assert.ThrowsAsync<InvalidUserDataException>(() => new UserService(context).RegisterReaderAsync(
+                ConstraintTestData.UserName, email, ConstraintTestData.NewReaderPassword));
+
+            // Assert
+            Assert.Equal(PostgresErrorCodes.CheckViolation, Assert.IsType<PostgresException>(ex.InnerException!.InnerException).SqlState);
+            Assert.Equal(usersBefore, await Db.ScalarAsync<long>("SELECT count(*) FROM users"));
         }
 
         [Fact]

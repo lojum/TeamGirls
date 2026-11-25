@@ -8,6 +8,8 @@ namespace SmartLib.IntegrationTests.TestData
 
         public const string ReaderEmail = "olena.b@gmail.com";
         public const string LibrarianEmail = "o.mandzyuvata@smartlib.ua";
+        public const string AdminEmail = "s.shelep@smartlib.ua";
+        public const string OtherReaderEmail = "maria.t@gmail.com";
         public const string OverdueReaderName = "Іван Ковальчук";
 
         public const string AvailableInventory = "INV-00101";
@@ -21,5 +23,10 @@ namespace SmartLib.IntegrationTests.TestData
         public const string FrankoAuthor = "Іван Франко";
         public const string FrankoGenre = "Класична література";
         public const string WrittenOffBookTitle = "Перевтілення";
+
+        public const int LocationsCount = 3;
+        public const string AvailableCopyRoom = "Головний зал";
+        public const string AvailableCopyShelf = "Стелаж 1A";
+        public const decimal OverdueFineAmount = 50.00m;
     }
 }

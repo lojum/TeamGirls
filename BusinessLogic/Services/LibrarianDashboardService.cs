@@ -1,6 +1,8 @@
 using DataAccess;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace BusinessLogic.Services;
 
@@ -34,13 +36,24 @@ public sealed class LibrarianDashboardService : ILibrarianDashboardService
     public const int RecentActivityCount = 8;
 
     private readonly SmartLibDbContext _context;
+    private readonly ILogger<LibrarianDashboardService> _logger;
 
-    public LibrarianDashboardService(SmartLibDbContext context)
+    public LibrarianDashboardService(SmartLibDbContext context, ILogger<LibrarianDashboardService>? logger = null)
     {
         _context = context;
+        _logger = logger ?? NullLogger<LibrarianDashboardService>.Instance;
     }
 
-    public async Task<IReadOnlyList<CopySummary>> GetCopiesAsync()
+    public Task<IReadOnlyList<CopySummary>> GetCopiesAsync() =>
+        LogFailureAsync(LoadCopiesAsync, "book copies");
+
+    public Task<IReadOnlyList<ReaderOption>> GetActiveReadersAsync() =>
+        LogFailureAsync(LoadActiveReadersAsync, "active readers");
+
+    public Task<IReadOnlyList<LoanActivity>> GetRecentActivityAsync(int count = RecentActivityCount) =>
+        LogFailureAsync(() => LoadRecentActivityAsync(count), "recent activity");
+
+    private async Task<IReadOnlyList<CopySummary>> LoadCopiesAsync()
     {
         var copies = await _context.BookCopies.AsNoTracking()
             .Include(c => c.Book).ThenInclude(b => b.Authors)
@@ -72,7 +85,7 @@ public sealed class LibrarianDashboardService : ILibrarianDashboardService
         }).ToList();
     }
 
-    public async Task<IReadOnlyList<ReaderOption>> GetActiveReadersAsync()
+    private async Task<IReadOnlyList<ReaderOption>> LoadActiveReadersAsync()
     {
         return await _context.Users.AsNoTracking()
             .Where(u => u.Role == UserRole.Reader && u.IsActive)
@@ -81,7 +94,7 @@ public sealed class LibrarianDashboardService : ILibrarianDashboardService
             .ToListAsync();
     }
 
-    public async Task<IReadOnlyList<LoanActivity>> GetRecentActivityAsync(int count = RecentActivityCount)
+    private async Task<IReadOnlyList<LoanActivity>> LoadRecentActivityAsync(int count)
     {
         return await _context.Loans.AsNoTracking()
             .OrderByDescending(l => l.ReturnedAt ?? l.LoanedAt)
@@ -93,6 +106,20 @@ public sealed class LibrarianDashboardService : ILibrarianDashboardService
                 l.Copy.InventoryNumber,
                 l.ReturnedAt != null))
             .ToListAsync();
+    }
+
+    // Збій бази записуємо в журнал з назвою дії, а вікно покаже користувачеві зрозуміле повідомлення
+    private async Task<T> LogFailureAsync<T>(Func<Task<T>> query, string action)
+    {
+        try
+        {
+            return await query();
+        }
+        catch (Exception exception)
+        {
+            _logger.LogError(exception, "Failed to load {Action} for the librarian dashboard", action);
+            throw;
+        }
     }
 
     // Фільтр таблиці: пошук за назвою, автором, ISBN або інвентарним номером і за статусом

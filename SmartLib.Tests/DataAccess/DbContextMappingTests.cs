@@ -67,14 +67,15 @@ namespace SmartLib.Tests.DataAccess
             Assert.Equal(SchemaTestData.BookCatalogViewColumns, columns.Order());
         }
 
-        [Fact]
-        public void Loan_ColumnsMatchSchema()
+        [Theory]
+        [MemberData(nameof(SchemaTestData.EntityColumns), MemberType = typeof(SchemaTestData))]
+        public void Entity_ColumnsMatchSchema(Type entityType, string[] expectedColumns)
         {
             using var db = CreateNpgsqlContext();
 
-            var columns = ColumnsOf(db.Model.FindEntityType(typeof(Loan))!);
+            var columns = ColumnsOf(db.Model.FindEntityType(entityType)!);
 
-            Assert.Equal(SchemaTestData.LoanColumns, columns.Order());
+            Assert.Equal(expectedColumns, columns.Order());
         }
     }
 }

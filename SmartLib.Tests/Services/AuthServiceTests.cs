@@ -1,5 +1,6 @@
 using BusinessLogic.Services;
 using Domain.Enums;
+using Microsoft.Extensions.Logging;
 using SmartLib.Tests.Helpers;
 using SmartLib.Tests.TestData;
 
@@ -93,6 +94,47 @@ namespace SmartLib.Tests.Services
 
             // Assert
             Assert.Null(user);
+        }
+
+        [Fact]
+        public async Task Authenticate_Success_LogsSignInWithoutEmailOrPassword()
+        {
+            // Arrange
+            using var db = TestDb.Create();
+            TestDb.AddUser(db, UserTestData.ReaderEmail);
+            var logger = new ListLogger<AuthService>();
+
+            // Act
+            await new AuthService(db, logger).AuthenticateAsync(UserTestData.ReaderEmail, UserTestData.ReaderPassword);
+
+            // Assert
+            var entry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Information, entry.Level);
+            Assert.Contains(nameof(UserRole.Reader), entry.Message);
+            Assert.DoesNotContain(UserTestData.ReaderEmail, entry.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(UserTestData.ReaderPassword, entry.Message);
+        }
+
+        // Невдалий вхід записується з причиною, але email і пароль (персональні дані) у журнал не потрапляють
+        [Theory]
+        [MemberData(nameof(UserTestData.FailedSignIns), MemberType = typeof(UserTestData))]
+        public async Task Authenticate_Failure_LogsWarningWithReasonButNoPersonalData(
+            string email, string password, bool readerActive, string expectedReason)
+        {
+            // Arrange
+            using var db = TestDb.Create();
+            TestDb.AddUser(db, UserTestData.ReaderEmail, isActive: readerActive);
+            var logger = new ListLogger<AuthService>();
+
+            // Act
+            await new AuthService(db, logger).AuthenticateAsync(email, password);
+
+            // Assert
+            var entry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Warning, entry.Level);
+            Assert.Contains(expectedReason, entry.Message);
+            Assert.DoesNotContain(email.Trim(), entry.Message, StringComparison.OrdinalIgnoreCase);
+            Assert.DoesNotContain(password, entry.Message);
         }
 
         [Fact]

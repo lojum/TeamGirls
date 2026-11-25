@@ -45,6 +45,17 @@ namespace SmartLib.IntegrationTests.TestData
             "@gmail.com"
         };
 
+        // Адреси, які MailAddress.TryCreate у застосунку вважає правильними, а DOMAIN email_address у базі — ні.
+        // Форми мають перевіряти email тим самим правилом, що й база (задача #84)
+        public static TheoryData<string> EmailsRejectedOnlyByDatabase => new()
+        {
+            "olena@gmail",
+            "a@b",
+            "Olena <olena@gmail.com>",
+            "олена@gmail.com",
+            "\"x y\"@gmail.com"
+        };
+
         public static TheoryData<string> ExistingEmailVariants => new()
         {
             "OLENA.B@GMAIL.COM",
