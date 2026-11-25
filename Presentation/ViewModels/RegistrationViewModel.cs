@@ -1,6 +1,5 @@
 using System;
 using System.ComponentModel;
-using System.Net.Mail;
 using System.Runtime.CompilerServices;
 using System.Threading.Tasks;
 using System.Windows;
@@ -62,7 +61,7 @@ namespace Presentation.ViewModels
             bool isNameValid = !string.IsNullOrWhiteSpace(FullName) && FullName.Length <= 150;
             NameErrorVisibility = isNameValid ? Visibility.Collapsed : Visibility.Visible;
 
-            bool isEmailValid = !string.IsNullOrWhiteSpace(Email) && MailAddress.TryCreate(Email, out _);
+            bool isEmailValid = RegistrationValidator.IsValidEmail(Email);
             EmailErrorVisibility = isEmailValid ? Visibility.Collapsed : Visibility.Visible;
 
             bool isPasswordValid = !string.IsNullOrWhiteSpace(Password) && Password.Length >= 8;
@@ -89,6 +88,12 @@ namespace Presentation.ViewModels
             {
                 IsSubmitEnabled = true;
                 MessageBox.Show("An account with this email address already exists.", "Registration error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            catch (InvalidUserDataException)
+            {
+                IsSubmitEnabled = true;
+                MessageBox.Show("The name or email address has an invalid format. Check the fields and try again.",
+                    "Registration error", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
             catch (Exception)
             {

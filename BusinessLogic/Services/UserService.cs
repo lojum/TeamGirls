@@ -19,6 +19,14 @@ public sealed class DuplicateEmailException : Exception
     }
 }
 
+public sealed class InvalidUserDataException : Exception
+{
+    public InvalidUserDataException(string message, Exception innerException)
+        : base(message, innerException)
+    {
+    }
+}
+
 public sealed class UserService : IUserService
 {
     private readonly SmartLibDbContext _context;
@@ -51,6 +59,14 @@ public sealed class UserService : IUserService
             })
         {
             throw new DuplicateEmailException(user.Email, exception);
+        }
+        catch (DbUpdateException exception)
+            when (exception.InnerException is PostgresException
+            {
+                SqlState: PostgresErrorCodes.CheckViolation
+            })
+        {
+            throw new InvalidUserDataException("The name or email address has an invalid format.", exception);
         }
     }
 }

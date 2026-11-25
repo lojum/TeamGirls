@@ -1,13 +1,14 @@
 using System;
 using System.ComponentModel;
-using System.Net.Mail;
 using System.Runtime.CompilerServices;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Input;
 using Presentation.Commands;
 using BusinessLogic.Services;
 using Domain.Enums;
 using Presentation.Services;
+using Presentation.Validators;
 
 namespace Presentation.ViewModels
 {
@@ -42,7 +43,7 @@ namespace Presentation.ViewModels
             _authService = authService;
             _navigationService = navigationService;
             BackCommand = new RelayCommand(ExecuteBack);
-            LoginCommand = new RelayCommand(ExecuteLogin);
+            LoginCommand = new RelayCommand(async _ => await LoginAsync());
         }
 
         private void ValidateInput()
@@ -51,11 +52,11 @@ namespace Presentation.ViewModels
             LoginErrorVisibility = Visibility.Collapsed;
         }
 
-        private async void ExecuteLogin(object? obj)
+        public async Task LoginAsync()
         {
             bool isValid = true;
 
-            if (!MailAddress.TryCreate(Email, out _))
+            if (!RegistrationValidator.IsValidEmail(Email))
             {
                 EmailErrorVisibility = Visibility.Visible;
                 isValid = false;
