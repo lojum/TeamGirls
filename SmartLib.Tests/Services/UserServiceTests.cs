@@ -32,7 +32,7 @@ namespace SmartLib.Tests.Services
         }
 
         [Fact]
-        public async Task RegisterReader_Success_LogsNewReaderWithoutPassword()
+        public async Task RegisterReader_Success_LogsNewReaderWithoutPersonalData()
         {
             // Arrange
             using var db = TestDb.Create();
@@ -44,7 +44,29 @@ namespace SmartLib.Tests.Services
             // Assert
             var entry = Assert.Single(logger.Entries);
             Assert.Equal(LogLevel.Information, entry.Level);
+            Assert.DoesNotContain(NewReaderEmail.Trim(), entry.Message, StringComparison.OrdinalIgnoreCase);
             Assert.DoesNotContain(NewReaderPassword, entry.Message);
+        }
+
+        [Fact]
+        public async Task RegisterReader_DuplicateEmail_LogsWarningWithoutEmail()
+        {
+            // Arrange: унікальний індекс бази відхиляє повторний email
+            var failure = new ThrowOnSaveInterceptor(new DbUpdateException("duplicate", new Npgsql.PostgresException(
+                "duplicate key", "ERROR", "ERROR", Npgsql.PostgresErrorCodes.UniqueViolation,
+                constraintName: "ux_users_email")));
+            using var db = TestDb.Create(failure);
+            failure.Enabled = true;
+            var logger = new ListLogger<UserService>();
+
+            // Act
+            await Assert.ThrowsAsync<DuplicateEmailException>(
+                () => new UserService(db, logger).RegisterReaderAsync(NewReaderName, NewReaderEmail, NewReaderPassword));
+
+            // Assert
+            var entry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Warning, entry.Level);
+            Assert.DoesNotContain(NewReaderEmail.Trim(), entry.Message, StringComparison.OrdinalIgnoreCase);
         }
 
         [Fact]

@@ -75,21 +75,21 @@
                         <TextBlock Text="Full Name" Style="{StaticResource FieldLabelStyle}"/>
                         <TextBox x:Name="NameInput" Style="{StaticResource InputStyle}" Margin="0,0,0,4" Text="{Binding FullName, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBlock x:Name="NameErrorText"
-                                   Text="Enter a name of up to 150 characters."
+                                   Text="Enter your full name (up to 150 characters)."
                                    Style="{StaticResource FieldErrorStyle}"
                                    Visibility="{Binding NameErrorVisibility}"/>
 
                         <TextBlock Text="Email" Style="{StaticResource FieldLabelStyle}" Margin="0,12,0,7"/>
                         <TextBox x:Name="EmailInput" Style="{StaticResource InputStyle}" Margin="0,0,0,4" Text="{Binding Email, UpdateSourceTrigger=PropertyChanged}"/>
                         <TextBlock x:Name="EmailErrorText"
-                                   Text="Enter a valid email address."
+                                   Text="Enter a valid email address, e.g. name@example.com."
                                    Style="{StaticResource FieldErrorStyle}"
                                    Visibility="{Binding EmailErrorVisibility}"/>
 
                         <TextBlock Text="Password" Style="{StaticResource FieldLabelStyle}" Margin="0,12,0,7"/>
                         <PasswordBox x:Name="PasswordInput" Style="{StaticResource PasswordInputStyle}" Margin="0,0,0,4" PasswordChanged="PasswordInput_PasswordChanged"/>
                         <TextBlock x:Name="PasswordErrorText"
-                                   Text="Password must contain at least 8 characters."
+                                   Text="Password must be at least 8 characters."
                                    Style="{StaticResource FieldErrorStyle}"
                                    Visibility="{Binding PasswordErrorVisibility}"/>
 

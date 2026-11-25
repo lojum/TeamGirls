@@ -8,6 +8,27 @@ public static class RegistrationTestData
     public const string ValidEmail = "oksana@smartlib.ua";
     public const string ValidPassword = "StrongPass123!";
 
+    public static TheoryData<string> InvalidEmails => new()
+    {
+        "olena@gmail",
+        "a@b",
+        "Olena <olena@gmail.com>",
+        "олена@gmail.com",
+        "\"x y\"@gmail.com",
+        "bad-email",
+        "",
+        "      "
+    };
+
+    public static TheoryData<string> ValidEmails => new()
+    {
+        "olena.b@gmail.com",
+        "o.mandzyuvata@smartlib.ua",
+        "a+b@x.io",
+        "OLENA.B@GMAIL.COM",
+        " olena.b@gmail.com "
+    };
+
     public static TheoryData<string, string, string, string> ValidInputs => new()
     {
         { ValidFullName, ValidEmail, ValidPassword, ValidPassword }

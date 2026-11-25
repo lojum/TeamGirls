@@ -87,6 +87,12 @@ namespace Presentation.ViewModels
                 IsSubmitEnabled = true;
                 MessageBox.Show("An account with this email address already exists.", "Registration error", MessageBoxButton.OK, MessageBoxImage.Warning);
             }
+            catch (InvalidUserDataException)
+            {
+                IsSubmitEnabled = true;
+                MessageBox.Show("The name or email address has an invalid format. Check the fields and try again.",
+                    "Registration error", MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
             catch (Exception)
             {
                 IsSubmitEnabled = true;

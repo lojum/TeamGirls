@@ -15,7 +15,7 @@ namespace SmartLib.Tests.Logging
         private readonly string _directory = Path.Combine(Path.GetTempPath(), $"smartlib-logs-{Guid.NewGuid():N}");
 
         [Fact]
-        public async Task FailedSignIn_IsWrittenToLogFile_WithoutPassword()
+        public async Task FailedSignIn_IsWrittenToLogFile_WithoutPersonalData()
         {
             // Arrange
             using var db = TestDb.Create();
@@ -32,7 +32,8 @@ namespace SmartLib.Tests.Logging
             var file = Assert.Single(Directory.GetFiles(_directory, "smartlib-*.log"));
             var text = await File.ReadAllTextAsync(file);
             Assert.Contains($"[WRN] {typeof(AuthService).FullName}", text);
-            Assert.Contains(UserTestData.ReaderEmail, text);
+            Assert.Contains("wrong password", text);
+            Assert.DoesNotContain(UserTestData.ReaderEmail, text);
             Assert.DoesNotContain(UserTestData.WrongPassword, text);
         }
 

@@ -21,7 +21,7 @@ public sealed class DuplicateEmailException : Exception
     }
 }
 
-// База відхилила ім'я або email за правилами DOMAIN (наприклад, email без домену верхнього рівня)
+// База відхилила ім'я або email за правилами DOMAIN.
 public sealed class InvalidUserDataException : Exception
 {
     public InvalidUserDataException(Exception innerException)
@@ -64,7 +64,7 @@ public sealed class UserService : IUserService
             })
         {
             _context.Entry(user).State = EntityState.Detached;
-            _logger.LogWarning("Registration rejected: email {Email} is already in use", user.Email);
+            _logger.LogWarning("Registration rejected: email is already in use");
             throw new DuplicateEmailException(user.Email, exception);
         }
         catch (DbUpdateException exception)
@@ -80,7 +80,7 @@ public sealed class UserService : IUserService
         catch (Exception exception)
         {
             _context.Entry(user).State = EntityState.Detached;
-            _logger.LogError(exception, "Failed to register reader {Email}", user.Email);
+            _logger.LogError(exception, "Failed to register a reader");
             throw;
         }
 
