@@ -2,66 +2,67 @@ using BusinessLogic.Services;
 using Microsoft.EntityFrameworkCore;
 using SmartLib.IntegrationTests.Infrastructure;
 using SmartLib.IntegrationTests.TestData;
-using Xunit;
+using static SmartLib.IntegrationTests.TestData.SecurityTestData;
 
 namespace SmartLib.IntegrationTests.Tests
 {
+    // Базова перевірка безпеки на справжній PostgreSQL: SQL-ін'єкції і зберігання паролів
     [Trait("Category", "Integration")]
     public class SecurityIntegrationTests : IntegrationTestBase
     {
+        private const string CountBooksSql = "SELECT count(*) FROM books";
+        private const string CountUsersSql = "SELECT count(*) FROM users";
+
         public SecurityIntegrationTests(PostgresServer server) : base(server)
         {
         }
 
-        [Fact]
-        public async Task BookSearch_SqlInjection_ReturnsNothingAndChangesNothing()
+        [Theory]
+        [MemberData(nameof(SqlInjectionAttempts), MemberType = typeof(SecurityTestData))]
+        public async Task BookSearch_SqlInjection_ReturnsNothingAndChangesNothing(string attack)
         {
+            // Arrange
             await using var context = Db.CreateContext();
-            var booksBefore = await Db.ScalarAsync<long>("SELECT count(*) FROM books");
-            var usersBefore = await Db.ScalarAsync<long>("SELECT count(*) FROM users");
-            var service = new BookService(context);
+            var booksBefore = await Db.ScalarAsync<long>(CountBooksSql);
+            var usersBefore = await Db.ScalarAsync<long>(CountUsersSql);
 
-            foreach (var attack in SecurityTestData.SqlInjectionPayloads)
-            {
-                var results = await service.SearchBooksAsync(attack);
+            // Act
+            var results = await new BookService(context).SearchBooksAsync(attack);
 
-                Assert.Empty(results);
-                Assert.Equal(booksBefore, await Db.ScalarAsync<long>("SELECT count(*) FROM books"));
-                Assert.Equal(usersBefore, await Db.ScalarAsync<long>("SELECT count(*) FROM users"));
-            }
+            // Assert: рядок шукається як звичайний текст, таблиці не змінилися
+            Assert.Empty(results);
+            Assert.Equal(booksBefore, await Db.ScalarAsync<long>(CountBooksSql));
+            Assert.Equal(usersBefore, await Db.ScalarAsync<long>(CountUsersSql));
         }
 
-        [Fact]
-        public async Task Login_SqlInjectionInEmail_ReturnsNull()
+        [Theory]
+        [MemberData(nameof(SqlInjectionAttempts), MemberType = typeof(SecurityTestData))]
+        public async Task Login_SqlInjectionInEmailAndPassword_ReturnsNull(string attack)
         {
+            // Arrange
             await using var context = Db.CreateContext();
-            var service = new AuthService(context);
 
-            foreach (var attack in SecurityTestData.SqlInjectionPayloads)
-            {
-                var user = await service.AuthenticateAsync(attack, attack);
-                Assert.Null(user);
-            }
+            // Act
+            var user = await new AuthService(context).AuthenticateAsync(attack, attack);
+
+            // Assert
+            Assert.Null(user);
         }
 
         [Fact]
         public async Task PasswordHashes_InDatabase_AreNeverPlainText()
         {
+            // Arrange
             await using var context = Db.CreateContext();
 
-            var hashes = await context.Users
-                .Select(u => u.PasswordHash)
-                .ToListAsync();
+            // Act
+            var hashes = await context.Users.Select(u => u.PasswordHash).ToListAsync();
 
+            // Assert: кожен пароль збережено лише як хеш PBKDF2 або BCrypt
             Assert.NotEmpty(hashes);
-            foreach (var hash in hashes)
-            {
-                Assert.False(string.IsNullOrWhiteSpace(hash));
-                Assert.True(
-                    hash.StartsWith("pbkdf2-sha256$", StringComparison.Ordinal) ||
-                    hash.StartsWith("$2", StringComparison.Ordinal),
-                    $"Хеш пароля не схожий на безпечний хеш: {hash}");
-            }
+            Assert.All(hashes, hash => Assert.True(
+                hash.StartsWith(Pbkdf2Prefix, StringComparison.Ordinal)
+                || hash.StartsWith(BcryptPrefix, StringComparison.Ordinal)));
         }
     }
 }
