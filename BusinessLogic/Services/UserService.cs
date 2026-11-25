@@ -21,7 +21,7 @@ public sealed class DuplicateEmailException : Exception
     }
 }
 
-// База відхилила ім'я або email за правилами DOMAIN (наприклад, email без домену верхнього рівня)
+// База відхилила ім'я або email за правилами DOMAIN.
 public sealed class InvalidUserDataException : Exception
 {
     public InvalidUserDataException(Exception innerException)

@@ -28,6 +28,27 @@ namespace SmartLib.Tests
             Assert.False(isValid);
         }
 
+        [Theory]
+        [MemberData(nameof(RegistrationTestData.InvalidEmails), MemberType = typeof(RegistrationTestData))]
+        public void IsValidEmail_AddressRejectedByDatabase_ReturnsFalse(string email)
+        {
+            Assert.False(RegistrationValidator.IsValidEmail(email));
+        }
+
+        [Theory]
+        [MemberData(nameof(RegistrationTestData.ValidEmails), MemberType = typeof(RegistrationTestData))]
+        public void IsValidEmail_ValidAddress_ReturnsTrue(string email)
+        {
+            Assert.True(RegistrationValidator.IsValidEmail(email));
+        }
+
+        [Fact]
+        public void IsValidEmail_AddressLongerThan255Characters_ReturnsFalse()
+        {
+            string email = new string('a', 244) + "@example.com";
+            Assert.False(RegistrationValidator.IsValidEmail(email));
+        }
+
         [Fact]
         public void RegistrationViewModel_IsSubmitEnabled_UpdatesCorrectly()
         {
