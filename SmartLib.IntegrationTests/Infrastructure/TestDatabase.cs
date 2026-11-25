@@ -1,6 +1,7 @@
 using BusinessLogic;
 using DataAccess;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using Npgsql;
 
 namespace SmartLib.IntegrationTests.Infrastructure
@@ -51,9 +52,10 @@ namespace SmartLib.IntegrationTests.Infrastructure
             await ExecuteAsync(script);
         }
 
-        public SmartLibDbContext CreateContext() =>
+        public SmartLibDbContext CreateContext(params IInterceptor[] interceptors) =>
             new(new DbContextOptionsBuilder<SmartLibDbContext>()
                 .UseSmartLibDatabase(_dataSource ?? throw new InvalidOperationException("Database is not created."))
+                .AddInterceptors(interceptors)
                 .Options);
 
         public async Task ExecuteAsync(string sql, params (string Name, object Value)[] parameters)

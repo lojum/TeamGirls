@@ -3,6 +3,8 @@ using DataAccess;
 using Domain.Entities;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using Microsoft.Extensions.Logging;
 using SmartLib.Tests.Helpers;
 using SmartLib.Tests.TestData;
 using static SmartLib.Tests.TestData.LoanTestData;
@@ -13,13 +15,17 @@ namespace SmartLib.Tests.Services
     public class LoanServiceTests
     {
         private static (SmartLibDbContext Db, LoanService Service, BookCopy Copy) Arrange(
-            CopyStatus copyStatus = CopyStatus.Available, bool readerActive = true)
+            CopyStatus copyStatus = CopyStatus.Available, bool readerActive = true,
+            UserRole issuerRole = UserRole.Librarian, bool issuerActive = true,
+            ListLogger<LoanService>? logger = null, params IInterceptor[] interceptors)
         {
-            var db = TestDb.Create();
+            var db = TestDb.Create(interceptors);
             TestDb.AddUser(db, UserTestData.ReaderEmail, isActive: readerActive);
+            TestDb.AddUser(db, UserTestData.LibrarianEmail, issuerRole, issuerActive,
+                fullName: UserTestData.LibrarianName, userId: LibrarianId);
             var book = TestDb.AddBook(db, BookTitle, BookAuthor, BookGenre);
             var copy = TestDb.AddCopy(db, book, InventoryNumber, copyStatus);
-            return (db, new LoanService(db, new FixedTimeProvider(Now)), copy);
+            return (db, new LoanService(db, new FixedTimeProvider(Now), logger), copy);
         }
 
         [Fact]
@@ -89,8 +95,7 @@ namespace SmartLib.Tests.Services
         public async Task IssueBook_EmailOfLibrarian_IsNotTreatedAsReader()
         {
             // Arrange
-            var (db, service, _) = Arrange();
-            TestDb.AddUser(db, UserTestData.LibrarianEmail, UserRole.Librarian);
+            var (_, service, _) = Arrange();
 
             // Act & Assert
             await Assert.ThrowsAsync<LoanException>(
@@ -210,12 +215,118 @@ namespace SmartLib.Tests.Services
             Assert.Empty(db.Loans);
         }
 
+        [Theory]
+        [MemberData(nameof(NotAllowedIssuers), MemberType = typeof(LoanTestData))]
+        public async Task IssueBook_IssuerIsNotActiveLibrarian_Throws(UserRole issuerRole, bool issuerActive)
+        {
+            // Arrange
+            var (db, service, _) = Arrange(issuerRole: issuerRole, issuerActive: issuerActive);
+
+            // Act
+            var ex = await Assert.ThrowsAsync<LoanException>(
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId));
+
+            // Assert
+            Assert.Contains(NotLibrarianMessage, ex.Message);
+            Assert.Empty(db.Loans);
+        }
+
+        [Fact]
+        public async Task IssueBook_UnknownLibrarianId_Throws()
+        {
+            // Arrange
+            var (db, service, _) = Arrange();
+
+            // Act
+            var ex = await Assert.ThrowsAsync<LoanException>(
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, UnknownLibrarianId));
+
+            // Assert
+            Assert.Contains(NotLibrarianMessage, ex.Message);
+            Assert.Empty(db.Loans);
+        }
+
+        // Інший бібліотекар встиг видати примірник між перевіркою і збереженням: база відхиляє другу видачу
+        [Fact]
+        public async Task IssueBook_CopyTakenConcurrently_ThrowsFriendlyLoanException()
+        {
+            // Arrange
+            var logger = new ListLogger<LoanService>();
+            var failure = new ThrowOnSaveInterceptor(new DbUpdateException("duplicate", new Npgsql.PostgresException(
+                "duplicate key", "ERROR", "ERROR", Npgsql.PostgresErrorCodes.UniqueViolation,
+                constraintName: "ux_loans_one_active_per_copy")));
+            var (db, service, _) = Arrange(logger: logger, interceptors: failure);
+            failure.Enabled = true;
+
+            // Act
+            var ex = await Assert.ThrowsAsync<LoanException>(
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId));
+
+            // Assert: зрозуміле повідомлення, невдала видача не лишилася в контексті, подія записана в журнал
+            Assert.Contains(CopyJustIssuedMessage, ex.Message);
+            Assert.IsType<DbUpdateException>(ex.InnerException);
+            Assert.DoesNotContain(db.ChangeTracker.Entries<Loan>(), e => e.State == EntityState.Added);
+            Assert.Contains(logger.Entries, e => e.Level == LogLevel.Warning && e.Message.Contains(InventoryNumber));
+        }
+
+        [Fact]
+        public async Task IssueBook_UnexpectedDatabaseError_IsLoggedAndRethrown()
+        {
+            // Arrange
+            var logger = new ListLogger<LoanService>();
+            var failure = new ThrowOnSaveInterceptor(new InvalidOperationException("connection lost"));
+            var (db, service, _) = Arrange(logger: logger, interceptors: failure);
+            failure.Enabled = true;
+
+            // Act
+            await Assert.ThrowsAsync<InvalidOperationException>(
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId));
+
+            // Assert
+            Assert.DoesNotContain(db.ChangeTracker.Entries<Loan>(), e => e.State == EntityState.Added);
+            var error = Assert.Single(logger.Entries, e => e.Level == LogLevel.Error);
+            Assert.IsType<InvalidOperationException>(error.Exception);
+        }
+
+        [Fact]
+        public async Task IssueBook_Success_WritesInformationToLog()
+        {
+            // Arrange
+            var logger = new ListLogger<LoanService>();
+            var (_, service, _) = Arrange(logger: logger);
+
+            // Act
+            await service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId);
+
+            // Assert
+            var entry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Information, entry.Level);
+            Assert.Contains(InventoryNumber, entry.Message);
+            Assert.Contains(LibrarianId.ToString(), entry.Message);
+        }
+
+        [Fact]
+        public async Task IssueBook_RejectedByBusinessRule_WritesWarningToLog()
+        {
+            // Arrange
+            var logger = new ListLogger<LoanService>();
+            var (_, service, _) = Arrange(CopyStatus.WrittenOff, logger: logger);
+
+            // Act
+            await Assert.ThrowsAsync<LoanException>(
+                () => service.IssueBookAsync(InventoryNumber, UserTestData.ReaderEmail, LibrarianId));
+
+            // Assert
+            var entry = Assert.Single(logger.Entries);
+            Assert.Equal(LogLevel.Warning, entry.Level);
+        }
+
         [Fact]
         public async Task GetActiveLoans_ReturnsOnlyReadersUnreturnedLoans()
         {
             // Arrange: видача читача, повернена видача та видача іншого читача
             var (db, service, copy) = Arrange();
-            var reader = await db.Users.SingleAsync();
+            var reader = await db.Users.SingleAsync(u => u.Email == UserTestData.ReaderEmail);
             var other = TestDb.AddUser(db, LibrarianTestData.SecondReaderEmail);
             var book = await db.Books.SingleAsync();
             var returnedCopy = TestDb.AddCopy(db, book, LibrarianTestData.LoanedInventory);

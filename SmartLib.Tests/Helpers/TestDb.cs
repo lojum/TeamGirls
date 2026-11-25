@@ -2,6 +2,7 @@ using DataAccess;
 using Domain.Entities;
 using Domain.Enums;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Diagnostics;
 using SmartLib.Tests.TestData;
 
 namespace SmartLib.Tests.Helpers
@@ -9,16 +10,20 @@ namespace SmartLib.Tests.Helpers
     // Окрема in-memory база для кожного тесту, щоб тести не впливали один на одного
     public static class TestDb
     {
-        public static SmartLibDbContext Create() =>
+        public static SmartLibDbContext Create(params IInterceptor[] interceptors) =>
             new(new DbContextOptionsBuilder<SmartLibDbContext>()
                 .UseInMemoryDatabase(Guid.NewGuid().ToString())
+                .AddInterceptors(interceptors)
                 .Options);
 
         public static User AddUser(SmartLibDbContext db, string email, UserRole role = UserRole.Reader,
-            bool isActive = true, string password = UserTestData.ReaderPassword, string fullName = UserTestData.ReaderName)
+            bool isActive = true, string password = UserTestData.ReaderPassword, string fullName = UserTestData.ReaderName,
+            long userId = 0)
         {
+            // userId = 0: ідентифікатор згенерує база; інакше задаємо його явно (наприклад, для бібліотекаря)
             var user = new User
             {
+                UserId = userId,
                 FullName = fullName,
                 Email = email,
                 PasswordHash = BusinessLogic.Services.PasswordHasher.Hash(password),
